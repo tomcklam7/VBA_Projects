@@ -1,0 +1,370 @@
+Option Explicit
+Sub Form_Import_TB()
+    On Error Resume Next
+    
+    Application.Run "ListOpenWorkbooks"
+    
+    ' Add error handling after the Application.Run
+    If Err.Number <> 0 Then
+        MsgBox "Error running ListOpenWorkbooks: " & Err.Description
+        Exit Sub
+    End If
+    On Error GoTo 0  ' Reset error handling
+    
+    If ShtActiveSht.Range("A" & Rows.Count).End(xlUp).row = 1 Then
+        Dim GOTOWS As String
+        GOTOWS = ShtActiveSht.Range("A1").Value
+        
+        If GOTOWS = "" Then
+            MsgBox "Please open a data worksheet first!"
+        Else
+            On Error Resume Next
+            Workbooks(GOTOWS).Activate
+            If Err.Number <> 0 Then
+                MsgBox "Could not find workbook: " & GOTOWS
+                Exit Sub
+            End If
+            Range("A1").Select
+            Application.Run "Import_TB"
+        End If
+    Else
+        With SelectAWS_TB
+            .StartUpPosition = 0
+            .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+            .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+            .Show
+        End With
+    End If
+End Sub
+
+Sub Import_TB()
+    ' Declare variables
+    Dim TBCell As Range
+    Dim DateStr As String
+    Dim PeriodStr As String
+    Dim intMonth As Integer
+    Dim rptDate As Date
+    Dim WB1 As Workbook
+    Dim WB2 As Workbook
+    Dim newWS As Worksheet
+    Dim i As Long
+    
+    ' Use ClassModSettings to handle Application settings
+    Dim settings As New ClassModSettings
+    settings.TurnOff
+    
+    ' Store workbook references
+    Set WB1 = ThisWorkbook  ' Main Financial Workbook
+    Set WB2 = ActiveWorkbook ' Data worksheet
+    
+    On Error Resume Next
+    
+    ' Start from A1
+    Range("A1").Select
+    
+    ' Find "Trial Balance"
+    Set TBCell = Cells.Find(What:="Trial Balance", _
+                           LookIn:=xlValues, _
+                           LookAt:=xlWhole, _
+                           SearchOrder:=xlByRows, _
+                           SearchDirection:=xlNext)
+    
+    If TBCell Is Nothing Then
+        MsgBox "This worksheet is not a Trial Balance. Please run again.", vbExclamation
+        settings.TurnOn
+        Exit Sub
+    End If
+    
+    ' Duplicate the active sheet
+    ActiveSheet.Copy After:=ActiveSheet
+    Set newWS = ActiveSheet
+    
+    ' Find Trial Balance cell in new sheet
+    Set TBCell = newWS.Cells.Find(What:="Trial Balance", _
+                                 LookIn:=xlValues, _
+                                 LookAt:=xlWhole, _
+                                 SearchOrder:=xlByRows, _
+                                 SearchDirection:=xlNext)
+    
+    ' Get period string from cell below Trial Balance
+    PeriodStr = TBCell.Offset(1, 0).Text
+    
+    ' Extract month from period string
+    If InStr(PeriodStr, "through ") > 0 Then
+        ' Get the text after "through " (will be like "02-24" or "07-26")
+        Dim monthYearStr As String
+        monthYearStr = Trim(Mid(PeriodStr, InStr(PeriodStr, "through ") + 8))
+        
+        ' Extract the first 2 characters which represent the month
+        intMonth = Val(Left(monthYearStr, 2))
+        
+        ' Validate month is between 1 and 12
+        If intMonth < 1 Or intMonth > 12 Then
+            MsgBox "Invalid month found in period string: " & monthYearStr, vbExclamation
+            settings.TurnOn
+            Exit Sub
+        End If
+    Else
+        MsgBox "Could not find month in period string: " & PeriodStr, vbExclamation
+        settings.TurnOn
+        Exit Sub
+    End If
+    
+    ' Get report date from header
+    ' Look above Trial Balance cell for date string
+    For i = 1 To TBCell.row - 1
+        DateStr = TBCell.Offset(-i, 0).Text
+        If IsDate(Left(DateStr, 26)) Then  ' Check first 26 chars for date
+            rptDate = CDate(Left(DateStr, 26))
+            Exit For
+        End If
+    Next i
+
+    ' Declaration
+    Dim FindCell As Range
+    Dim NoOfRows As Double
+    Dim arrayRows As Long
+    Dim tb_Array1 As Variant
+    Dim tb_Array2 As Variant
+    Dim chk_NI As Double
+    
+    ' Modify the Clean_TB call to receive NoOfRows, arrayRows, and the arrays
+    Call Clean_TB(NoOfRows, arrayRows, tb_Array1, tb_Array2, chk_NI)
+    
+    ' Now we have access to both arrays and chk_NI for later use
+    
+    ' Switch to main workbook and select appropriate sheet
+    WB1.Activate
+    
+    On Error Resume Next
+    Sheets("TB" & Format(intMonth, "00")).Select
+    
+    If Err.Number <> 0 Then
+        MsgBox "Could not find the appropriate TB sheet (TB" & Format(intMonth, "00") & ")", vbExclamation
+        settings.TurnOn
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    ' Set report date
+    Range("G1").Value = rptDate
+    
+    Dim HowManyRows As Long, AddHowManyRows As Long
+    '6 is the last row of title; so 7 is the frist row of data.
+    HowManyRows = Range("E" & Rows.Count).End(xlUp).Offset(-1).row - 6
+'    Debug.Print HowManyRows
+    
+    ' Clear contents of existing data
+    ' A7 is the first row that contain the data
+    Range("A7:E" & Range("E" & Rows.Count).End(xlUp).row - 1).ClearContents
+    
+    Set FindCell = Range("E" & Rows.Count).End(xlUp).Offset(-1).Rows
+    
+    AddHowManyRows = arrayRows - HowManyRows 'Add one more row to make keep filter working
+    ' A7 is the first row that contain the data
+    If AddHowManyRows > 0 Then
+        Range(FindCell, FindCell.Offset(AddHowManyRows - 1)).EntireRow.Insert
+    ElseIf AddHowManyRows < 0 Then
+        Range("A7", Range("A7").Offset(-AddHowManyRows - 1)).EntireRow.Delete
+    ElseIf AddHowManyRows = 0 Then
+    End If
+    
+        ' Now we can proceed with writing the arrays to WB1...
+
+    ' Turn settings back on
+    settings.TurnOn
+End Sub
+
+Private Sub Clean_TB(ByRef NoOfRows As Double, ByRef arrayRows As Long, _
+                    ByRef tb_Array1 As Variant, ByRef tb_Array2 As Variant, _
+                    ByRef chk_NI As Double)
+                    
+    ' Use ClassModSettings to handle Application settings
+    Dim settings As New ClassModSettings
+                    
+                    
+    If ActiveWorkbook.codeName = "BALSHT_PNL_TB" Then
+        MsgBox ("Please do not run this macro on the actual workbook")
+        Exit Sub
+    End If
+
+    'SELECT ENTIRE COLUMN
+    Columns("A:A").Select
+
+    'DO TEXT TO COLUMNS
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlFixedWidth, _
+        FieldInfo:=Array(Array(0, 1), Array(13, 1), Array(71, 1), Array(88, 1), Array(108, 1)) _
+        , TrailingMinusNumbers:=True
+            
+    'REMOVE EXCESS ROWS
+    Dim THEEND As Long
+    Dim SearchRange As Range
+    Dim FindRow1 As Range
+    Dim FindRow2 As Range
+    Dim DESROW As String
+
+    'Delete excess rows and set Net Income as last row
+    THEEND = Range("A" & Rows.Count).End(xlUp).row
+    Set SearchRange = Range("A1:A" & THEEND)
+    Set FindRow1 = SearchRange.Find("Net Income =", LookIn:=xlValues, LookAt:=xlWhole)
+    Range(FindRow1.Offset(1, 0), Range("A" & Rows.Count).End(xlUp)).EntireRow.Delete
+
+    'DO TEXT TO COLUMS ON ** Current Activity Summary **
+    Set FindRow2 = SearchRange.Find("Assets", LookIn:=xlValues, LookAt:=xlWhole)
+    DESROW = FindRow2.Offset(-1, 1).row
+    
+    ' Direct TextToColumns on the full range
+    Range("B" & DESROW & ":B" & Range("B" & Rows.Count).End(xlUp).row).TextToColumns _
+        Destination:=Range("B" & DESROW), _
+        DataType:=xlFixedWidth, _
+        FieldInfo:=Array(Array(0, 1), Array(18, 1)), _
+        TrailingMinusNumbers:=True
+
+    ' Direct replace without selection
+    Range(Range("B" & FindRow2.row), Range("C" & Rows.Count).End(xlUp)).Replace _
+        What:="<", Replacement:="(", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+    Range(Range("B" & FindRow2.row), Range("C" & Rows.Count).End(xlUp)).Replace _
+        What:=">", Replacement:=")", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Dim lastRow As String
+    lastRow = Range("D" & Rows.Count).End(xlUp).row
+    Range("A6", Range("E" & lastRow)).Select
+
+        Selection.Replace What:="<", Replacement:="(", LookAt:=xlPart, _
+            SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+            ReplaceFormat:=False
+        Selection.Replace What:=">", Replacement:=")", LookAt:=xlPart, _
+            SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+            ReplaceFormat:=False
+
+    Range("A6", Range("E" & lastRow)).Select
+
+        ActiveSheet.Sort.SortFields.Clear
+        ActiveSheet.Sort.SortFields.Add key:=Range("D6", Range("D" & lastRow)) _
+            , SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        With ActiveSheet.Sort
+            .SetRange Range("A6", Range("E" & lastRow))
+            .Header = xlGuess
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+
+    Range(Range("D" & Rows.Count).End(xlUp).Offset(1, 0), Range("D" & lastRow)).EntireRow.Delete
+
+    Dim FloorRow As String, SelectedRow As String
+    FloorRow = Range("D" & Rows.Count).End(xlUp).row
+    SelectedRow = FloorRow
+    'MsgBox (FloorRow)
+    'MsgBox (SelectedRow)
+    Do Until IsNumeric(Range("D" & SelectedRow))
+        If Not IsNumeric(Range("D" & SelectedRow)) Then
+            SelectedRow = SelectedRow - 1
+    '            MsgBox (SelectedRow)
+        End If
+    Loop
+
+    'REMOVE JUNKS
+    Range(Range("D" & SelectedRow).Offset(1, 0), Range("D" & Rows.Count).End(xlUp)).EntireRow.Delete
+    'ADD SPACES
+    Range("D" & Rows.Count).End(xlUp).Offset(1, 0).EntireRow.Select
+        Selection.Insert Shift:=xlDown
+
+    Columns("A:E").Columns.AutoFit
+    Range("A6").Select
+    ActiveWindow.FreezePanes = True
+
+    Columns("A:E").Font.Name = "Arial"
+    Columns("A:E").Font.Size = 8
+
+    Dim SORTTO As String
+    SORTTO = Range("E" & Rows.Count).End(xlUp).row
+    Range("A6", Range("E" & SORTTO)).Select
+
+        ActiveSheet.Sort.SortFields.Clear
+        ActiveSheet.Sort.SortFields.Add key:=Range("A6", Range("A" & SORTTO)) _
+            , SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        With ActiveSheet.Sort
+            .SetRange Range("A6", Range("E" & SORTTO))
+            .Header = xlGuess
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+        
+    'ADD SPACES
+    Range("E" & Rows.Count).End(xlUp).Offset(1, 0).EntireRow.Select
+        Selection.Insert Shift:=xlDown
+
+    Range("E" & Rows.Count).End(xlUp).Offset(1, 0).Formula = "=SUM(E6:" & Range("E" & Rows.Count).End(xlUp).Address(0, 0) & ")"
+    Range("E" & Rows.Count).End(xlUp).Copy
+    Range(Range("E" & Rows.Count).End(xlUp).Offset(0, -2), Range("E" & Rows.Count).End(xlUp).Offset(0, -1)).Select
+    ActiveSheet.Paste
+
+    Range("C6", Range("E" & Rows.Count).End(xlUp)).NumberFormat = "#,##0.00"
+    Range(FindRow2.Offset(0, 1), Range("C" & Rows.Count).End(xlUp)).NumberFormat = "#,##0.00"
+    Range("E" & Rows.Count).End(xlUp).Select
+    NoOfRows = Range("E" & Rows.Count).End(xlUp).Offset(-1, 0).row - Range("E6").row + 1
+
+    'Array to Read from 1000-1000 to last row of column E
+'    Dim tb_Array1 As Variant
+    Dim startRow As Long
+    
+    ' Find the "1000-1000" row
+    Set FindRow1 = Range("A:A").Find("1000-1000", LookIn:=xlValues, LookAt:=xlWhole)
+    If Not FindRow1 Is Nothing Then
+        startRow = FindRow1.row
+        ' Get the array from "1000-1000" row to one row before the last sum
+        tb_Array1 = Range("A" & startRow & ":E" & Range("E" & Rows.Count).End(xlUp).row - 1).Value
+    Else
+        MsgBox "Could not find row starting with '1000-1000'"
+        Exit Sub
+    End If
+
+    'Array to Read from Assets section
+'    Dim tb_Array2 As Variant
+    
+    ' Find the "Assets" row
+    Set FindRow2 = Range("A:A").Find("Assets", LookIn:=xlValues, LookAt:=xlWhole)
+    If Not FindRow2 Is Nothing Then
+        ' Get the array starting from column B of Assets row
+        ' to two rows above the last row in column C
+        tb_Array2 = Range(FindRow2.Offset(0, 1), _
+                         Range("C" & Rows.Count).End(xlUp).Offset(-2, 0)).Value
+    Else
+        MsgBox "Could not find row starting with 'Assets'"
+        Exit Sub
+    End If
+
+    ' Turn calculation on for checking
+    Application.calculation = xlCalculationAutomatic
+    
+    ' Get the last row
+    Dim lastRowL As Long
+    lastRowL = Range("E" & Rows.Count).End(xlUp).row
+    
+    ' Check if C, D, E are all zero in the last row
+    If Abs(Range("C" & lastRowL).Value) > 0.01 Or _
+       Abs(Range("D" & lastRowL).Value) > 0.01 Or _
+       Abs(Range("E" & lastRowL).Value) > 0.01 Then
+        MsgBox "TB worksheet is not balanced after the clean up, please check data sheet before moving on to the next step.", vbExclamation
+        settings.TurnOn
+        Exit Sub
+    End If
+    
+    ' Store Net Income value
+'    Dim chk_NI As Double
+    chk_NI = Range("C" & Range("C" & Rows.Count).End(xlUp).row).Value
+    Range("C" & Range("C" & Rows.Count).End(xlUp).row).NumberFormat = "$#,##0.00"
+
+    ' Get the number of rows in tb_array1
+    arrayRows = UBound(tb_Array1, 1)  ' This gets the number of rows in the array
+
+End Sub

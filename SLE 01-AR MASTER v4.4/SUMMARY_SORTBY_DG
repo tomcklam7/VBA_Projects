@@ -1,0 +1,43 @@
+'=====================================
+'| PRIVIATE SUB SORT D THEN G        |
+'=====================================
+Private Sub SUMMARY_SORTBY_DG()
+Dim settings As New ClassModSettings
+settings.TurnOff 'Turn Off
+
+'|============================================|
+'|FIND ENDOFROW, IF NOT EXIST, EXIT SUB       |
+'|============================================|
+Dim FindName As String, SearchRg As Range, FindCell As Range
+FindName = "ENDOFROW"
+Set SearchRg = Range(ShtSummaryData.Range("A1"), ShtSummaryData.Range("A" & Rows.Count).End(xlUp))
+Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindCell Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            settings.TurnOn 'Turn On
+            Exit Sub
+        End If
+'|=======================|
+'|SORT D THEN G          |
+'|=======================|
+  Dim SortRg As Range, SortCol1 As Range, SortCol2 As Range
+    Set SortRg = Range(ShtSummaryData.Range("A8"), ShtSummaryData.Range("AF" & FindCell.Offset(-1).row)) ' A8 TO AF ENDROW
+    Set SortCol1 = Range(ShtSummaryData.Range("D8"), ShtSummaryData.Range("D" & FindCell.Offset(-1).row))
+    Set SortCol2 = Range(ShtSummaryData.Range("G8"), ShtSummaryData.Range("G" & FindCell.Offset(-1).row))
+    
+        ActiveSheet.Sort.SortFields.Clear
+        ActiveSheet.Sort.SortFields.Add Key _
+            :=SortCol1, SortOn:=xlSortOnValues, Order:=xlAscending, _
+            DataOption:=xlSortNormal
+        ActiveSheet.Sort.SortFields.Add Key _
+            :=SortCol2, SortOn:=xlSortOnValues, Order:=xlAscending, _
+            DataOption:=xlSortNormal
+        With ActiveSheet.Sort
+            .SetRange SortRg
+            .Header = xlGuess
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+End Sub

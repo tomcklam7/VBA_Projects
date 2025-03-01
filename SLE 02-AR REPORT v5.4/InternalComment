@@ -1,0 +1,10 @@
+Sub Sort_InternalComment()
+    With ShtInternalComment
+        .Range("A4:A" & .Cells(.Rows.Count, "A").End(xlUp).Row).Sort _
+            Key1:=.Range("A4"), _
+            Order1:=xlAscending, _
+            Header:=xlNo
+            
+        .Range("A4:A" & .Cells(.Rows.Count, "A").End(xlUp).Row).Rows.AutoFit
+    End With
+End Sub

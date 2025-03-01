@@ -1,0 +1,86 @@
+Option Explicit
+Private Sub Format_AdHoc()
+    
+    'LOAD TIMER AND PROCESSING BAR
+    '=============================
+    Dim StartTime As Date, RunTime As String, TheTime As Long
+    StartTime = Now()
+    
+    UserForm1.Show vbModeless
+    UserForm1.Repaint
+    Application.screenUpdating = False
+    Application.StatusBar = "Updating in Progress, Please be patient..." 'Message on Status Bar
+       With UserForm1
+        .StartUpPosition = 0
+        .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+        .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+    '     .Show
+       End With
+        '    Application.Run "ResettoA1"
+            Dim settings As New ClassModSettings
+            settings.TurnOff 'Turn off
+            If Range("A1").Value = "Selman Leichenger Edson Hsu Newman and Moore LLP" Then
+                MsgBox "The macro was already ran. Thanks."
+                Application.screenUpdating = True
+                Unload UserForm1
+                Exit Sub
+                settings.TurnOn 'Turn on
+            End If
+            
+            Dim WhatTitle As String
+        '    Dim SortByWichCol As String
+            Dim CountBad As Long
+            Dim SaveName As String
+        
+            WhatTitle = "Cash Receipts Report"
+        '    SortByWichCol = "SortByBC"
+            SaveName = ""
+        
+            Call Check4Fields(CountBad)
+            If CountBad > 0 Then
+                'Some field were not found
+                Unload UserForm1
+                Exit Sub
+                settings.TurnOn 'Turn on
+            End If
+        '    Call SortBy(SortByWichCol)
+            settings.TurnOff 'Turn off
+            Application.Run "FormatTop"
+            Application.Run "FormatBoarders"
+            Application.Run "CleanBottomParts"
+            Application.Run "FormatBottom"
+            Call FormatTopByPeriod(WhatTitle)
+            Application.Run "SetPrint"
+            Application.Run "CleanExtraRows"
+            Columns("J:O").EntireColumn.AutoFit
+            
+            If WithAdjuster = False Then
+                Columns("D:E").EntireColumn.Delete
+            End If
+            
+            Range("A6").Select
+            ActiveWindow.ScrollRow = Selection.Offset(-1, 0).row 'Scroll row to selected cell
+            settings.TurnOn 'Turn on
+            Call SaveDoc(SaveName)
+        
+    'ULOAD USERFORM Formating, TIMER AND PROCESSING BAR
+    '==================================================
+    Unload UserForm1
+    Application.screenUpdating = True
+    Application.StatusBar = False 'Message on Status Bar - Off
+    
+    If Round((Now() - StartTime) * 24 * 60 * 60, 0) > 60 Then
+        RunTime = Int((Now() - StartTime) * 24 * 60) & " Minutes & " _
+        & Int(((Now() - StartTime) * 24 * 60 - Int((Now() - StartTime) * 24 * 60)) * 60) & " Seconds"
+    Else
+        TheTime = Round((Now() - StartTime) * 24 * 60 * 60, 0)
+        RunTime = Round((Now() - StartTime) * 24 * 60 * 60, 0) & " Seconds"
+    End If
+    
+    If TheTime < 10 Then 'Show Message box only if run time is greater than 10 seconds
+    Else
+        MsgBox ("Update completed" & vbNewLine & vbNewLine _
+                & "Time taken to run this Macro = " & RunTime)
+    End If
+End Sub
+

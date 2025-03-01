@@ -1,0 +1,45 @@
+'================
+'| FILER CLEAR  |
+'================
+Sub FILTER_CLR()
+    ActiveSheet.Unprotect
+    Dim settings As New ClassModSettings
+    settings.TurnOff 'Turn off
+
+    Dim FindName As String, SearchRg As Range, FindEnd As Range, RowsNeeded As Integer, Firstcell As Range, Lastcell As Range
+    Dim i As Long
+    
+    FindName = "ENDOFROW"
+    
+    Set SearchRg = Range(ShtSummaryRpt.Range("A1"), ShtSummaryRpt.Range("A" & Rows.Count).End(xlUp))
+    Set FindEnd = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindEnd Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            settings.TurnOn 'Turn On
+            Exit Sub
+        End If
+
+    Set Firstcell = Range("A8")
+    Set Lastcell = Range("AH" & FindEnd.Offset(-1).row)
+    For i = 1 To 34
+        ActiveSheet.Range(Firstcell, Lastcell).AutoFilter Field:=i
+    Next i
+        
+    settings.TurnOn 'Turn on
+    
+    ActiveSheet.Protect Password:="", _
+    DrawingObjects:=False, _
+    Contents:=True, _
+    Scenarios:=False, _
+    AllowFormattingCells:=False, _
+    AllowFormattingColumns:=False, _
+    AllowFormattingRows:=False, _
+    AllowInsertingColumns:=False, _
+    AllowInsertingRows:=False, _
+    AllowInsertingHyperlinks:=False, _
+    AllowDeletingColumns:=False, _
+    AllowDeletingRows:=False, _
+    AllowSorting:=True, _
+    AllowFiltering:=True, _
+    AllowUsingPivotTables:=False
+End Sub

@@ -1,0 +1,138 @@
+Option Explicit
+Sub ImportARNote()
+Dim settings As New ClassModSettings
+settings.TurnOff 'Turn off
+
+    ' Show the UserForm
+    With UserForm_Blank
+     .StartUpPosition = 0
+     .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+     .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+     .Show vbModeless
+    End With
+'    UserForm_Blank.Show vbModeless ' Show the UserForm modelessly
+
+    'Assign Workbooks
+    Dim WB1 As Workbook 'DataWorkbook
+    Dim WB2 As Workbook 'Macro Workbook
+    Dim WB1WS As Object
+
+    Set WB1 = ActiveWorkbook 'DataWorkbook
+    Set WB2 = ThisWorkbook 'Macro Workbook
+    
+    WB1.Activate
+    On Error Resume Next
+    ' Attempt to find the worksheet using its codename
+    Set WB1WS = WB1.Worksheets(CStr(WB1.VBProject.VBComponents("ShtSummaryRpt").Properties(7)))
+    On Error GoTo 0 ' Turn off error handling
+    
+    If WB1WS Is Nothing Then
+        ' If WB1WS is Nothing, the worksheet was not found
+        MsgBox "Worksheet with codename 'ShtSummaryRpt' not found in workbook '" & WB1.Name & "'.", vbExclamation, "Worksheet Not Found"
+        UserForm_Blank.Hide
+        settings.TurnOn 'Turn on
+        Exit Sub
+    Else
+        ' Activate the found worksheet
+        WB1WS.Activate
+    End If
+    
+    Dim HowManyRows As Long, AddHowManyRows As Long
+    
+    'Check if "ENDOFROW Exists, if not, exit
+    Dim FindName As String, SearchRg As Range, FindCell As Range
+    FindName = "ENDOFROW"
+    Set SearchRg = Range(Range("A1"), Range("A" & Rows.Count).End(xlUp))
+    Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindCell Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            UserForm_Blank.Hide
+            settings.TurnOn 'Turn on
+            Exit Sub
+        End If
+
+    HowManyRows = FindCell.Offset(-1).row - 7
+    Debug.Print HowManyRows
+
+    '======================================
+    ' READ DATA INTO ARRAY
+    '======================================
+    Dim OldARData() As Variant
+    Dim StartRow As Long, EndRow As Long, DataRange As Range
+    
+    ' Set the start row (row 8) and end row (row above "ENDOFROW")
+    StartRow = 8
+    EndRow = FindCell.row - 1
+    
+    ' Check if there is a valid range to read
+    If StartRow > EndRow Then
+        MsgBox "No valid data range found between row 8 and the row above 'ENDOFROW'.", vbExclamation, "Invalid Range"
+        UserForm_Blank.Hide
+        settings.TurnOn ' Turn on
+        Exit Sub
+    End If
+    
+    ' Define the range to read from column A to column AG
+    Set DataRange = WB1WS.Range("A" & StartRow & ":AG" & EndRow)
+    
+    ' Read the data into the array
+    OldARData = DataRange.Value
+    
+'    ' Optional: Display a confirmation message
+'    MsgBox "Data successfully loaded into OldARData array.", vbInformation, "Data Loaded"
+
+    WB2.Activate
+    ShtARNote.Activate
+    Dim LastRow As Long
+    Dim OutputArray() As Variant
+    Dim i As Long, j As Long
+    Dim SelectedCols As Variant
+    Dim OutputRowCount As Long
+    
+    ' Find the last row with data in the worksheet
+    LastRow = ShtARNote.Cells(ShtARNote.Rows.Count, 1).End(xlUp).row
+    
+    ' Check if there are more than 1 rows to delete
+    If LastRow > 1 Then
+        ' Delete rows 2 to the last row
+        ShtARNote.Rows("2:" & LastRow).Delete
+    End If
+    
+    '======================================
+    ' WRITE THE DATA OUT FROM THE ARRAY
+    '======================================
+    
+    ' Define the selected columns to extract:
+    ' 10 = Invoice Number
+    ' 26 = Color Code
+    ' 27 = Left Blank
+    ' 28 = Submission Date
+    ' 29 = Internal Comment
+    ' 30 = Comments for Attorney
+    SelectedCols = Array(10, 26, 27, 28, 29, 30)
+    
+    ' Determine the number of rows to output
+    OutputRowCount = UBound(OldARData, 1) - LBound(OldARData, 1) + 1
+    
+    ' Resize the output array: Rows = number of rows in OldARData, Columns = 6 (selected columns)
+    ReDim OutputArray(1 To OutputRowCount, 1 To 6)
+    
+    ' Populate the output array with selected columns
+    For i = LBound(OldARData, 1) To UBound(OldARData, 1)
+        For j = LBound(SelectedCols) To UBound(SelectedCols)
+            OutputArray(i, j + 1) = OldARData(i, SelectedCols(j))
+        Next j
+    Next i
+    
+    ' Write the output array to ShtARNote starting at A2
+    ShtARNote.Range("A2").Resize(UBound(OutputArray, 1), UBound(OutputArray, 2)).Value = OutputArray
+    
+    MsgBox "Data successfully written to ShtARNote!", vbInformation, "Process Complete"
+    
+    ' Hide the UserForm when the macro finishes
+    UserForm_Blank.Hide
+    
+settings.TurnOn 'Turn on
+
+End Sub
+

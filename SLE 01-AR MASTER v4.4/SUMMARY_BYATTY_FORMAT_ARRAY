@@ -1,0 +1,165 @@
+'================================
+'2ND STAGE FORMAT                |
+'================================
+Private Sub SUMMARY_BYATTY_FORMAT_ARRAY(ENDOFLASTINDEX As Long)
+
+'=============================================================
+'TO DEBUG FREEZE FROM HERE TO NEXT BOX
+'**************TO DEBUG SORT A THEN E*********************
+'=============================================================
+UserFormFormating.Show vbModeless
+UserFormFormating.Repaint
+Application.screenUpdating = False
+Application.StatusBar = "Updating in Progress, Please be patient..." 'Message on Status Bar
+   With UserFormFormating
+    .StartUpPosition = 0
+    .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+    .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+'     .Show
+   End With
+
+Application.DisplayAlerts = False
+Dim ws As Worksheet, TOTALSHTCOUNTS As Integer '*TO DEBUG UNHIDE THIS LINE ONLY...
+Dim pctCompl As Single
+
+TOTALSHTCOUNTS = Sht_END.Index - ENDOFLASTINDEX + 1 ' STORE COUNTS FOR % BAR
+Debug.Print ENDOFLASTINDEX
+For Each ws In ThisWorkbook.Worksheets
+    If ws.Index >= ENDOFLASTINDEX + 1 And ws.Index < Sht_END.Index Then
+    
+    ws.Activate
+'=============================================================
+'TO DEBUG FREEZE TO HERE
+'=============================================================
+
+    '|SET PERIMETER
+    Dim rw As Integer, BegRow As Integer, LastRow As Integer, Col As String, NewRow As Integer, RowstoAdd As Integer, j As Integer
+    BegRow = 9
+    LastRow = ActiveSheet.Range("H" & Rows.Count).End(xlUp).row
+    Col = "D"
+    RowstoAdd = 2
+
+    '|ADD SPACES
+    rw = LastRow ' To Row
+    Do
+        If Cells(rw, Col) <> Cells(rw - 1, Col) And Cells(rw, Col) <> "" Then
+            Rows(rw).Resize(RowstoAdd).Insert
+        End If
+        rw = rw - 1
+    Loop Until rw <= BegRow
+
+    'ADD 2 MORE ROW ON TOP
+    Range(ActiveSheet.Range("A9"), ActiveSheet.Range("A9").Offset(1)).EntireRow.Insert
+    
+    LastRow = ActiveSheet.Range("H" & Rows.Count).End(xlUp).row
+    
+    '|FORMAT
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlEdgeTop).Weight = xlMedium
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlEdgeBottom).Weight = xlMedium
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlEdgeLeft).Weight = xlMedium
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlEdgeRight).Weight = xlMedium
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlInsideVertical).LineStyle = xlContinuous
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlInsideVertical).Weight = xlHairline
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlInsideHorizontal).LineStyle = xlContinuous
+    Range(ActiveSheet.Range("A8"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Borders(xlInsideHorizontal).Weight = xlHairline
+    
+    Range(ActiveSheet.Range("J8"), ActiveSheet.Range("O" & LastRow).Offset(3)).Borders(xlEdgeLeft).Weight = xlMedium
+    Range(ActiveSheet.Range("J8"), ActiveSheet.Range("O" & LastRow).Offset(3)).Borders(xlEdgeRight).Weight = xlMedium
+    
+    Range(ActiveSheet.Range("P8"), ActiveSheet.Range("Q" & LastRow).Offset(3)).Borders(xlEdgeLeft).Weight = xlMedium
+    Range(ActiveSheet.Range("P8"), ActiveSheet.Range("Q" & LastRow).Offset(3)).Borders(xlEdgeRight).Weight = xlMedium
+    
+    Range(ActiveSheet.Range("R8"), ActiveSheet.Range("U" & LastRow).Offset(3)).Borders(xlEdgeLeft).Weight = xlMedium
+    Range(ActiveSheet.Range("R8"), ActiveSheet.Range("U" & LastRow).Offset(3)).Borders(xlEdgeRight).Weight = xlMedium
+    
+    Range(ActiveSheet.Range("A" & LastRow).Offset(3), ActiveSheet.Range("Z" & LastRow).Offset(3)).Font.Bold = True
+'    Range(ActiveSheet.Range("A" & LastRow).Offset(3), ActiveSheet.Range("X" & LastRow).Offset(3)).Interior.Pattern = xlSolid
+    Range(ActiveSheet.Range("A" & LastRow).Offset(3), ActiveSheet.Range("Z" & LastRow).Offset(3)).Interior.PatternColorIndex = xlAutomatic
+'    Range(ActiveSheet.Range("A" & LastRow).Offset(3), ActiveSheet.Range("X" & LastRow).Offset(3)).Interior.ThemeColor = xlThemeColorDark1
+    Range(ActiveSheet.Range("A" & LastRow).Offset(3), ActiveSheet.Range("Z" & LastRow).Offset(3)).Interior.TintAndShade = -0.249977111117893
+
+    '|SET PRINT AREA
+    ActiveSheet.PageSetup.PrintArea = Range(ActiveSheet.Range("A9"), ActiveSheet.Range("Z" & LastRow).Offset(3)).Address(0, 0)
+    
+    '|SUM AND DOUBLELINE
+    Dim ColumnFrom As String, ColumnTo As String, CellingRow As Integer, FloorRow As Integer
+    Dim DLColFrom As String, DLColTo As String, SpacetoAdd As Integer
+    Dim ColNoFrom As Long, ColNoTo As Long, i As Integer, Counter As Integer
+
+    '|SET PERIMETER
+    rw = 11 'From Row
+    LastRow = ActiveSheet.Range("H" & Rows.Count).End(xlUp).row 'To Row
+    ColumnFrom = "J" 'Sum From "Letter"
+    ColumnTo = "U" 'Sum To "Letter"
+    DLColFrom = "A" 'Doubleline From "Letter"
+    DLColTo = "Z" 'Doubleline To "Letter"
+    SpacetoAdd = 1
+
+    ColNoFrom = Range(ColumnFrom & 1).Column
+    ColNoTo = Range(ColumnTo & 1).Column
+    Counter = ColNoFrom
+
+    Do Until rw > LastRow
+        If Cells(rw, 1).Offset(-1, 0) = "" Then
+            CellingRow = rw
+        End If
+        If Cells(rw, 1).Offset(1, 0) = "" Then
+            FloorRow = rw
+        End If
+            rw = rw + 1
+        If Cells(rw, 1) = "" Then
+            For i = Counter To ColNoTo
+                Cells(rw, Counter).Formula = "=Subtotal(9," & Cells(CellingRow, Counter).Address(0, 0) & ":" _
+                & Cells(FloorRow, Counter).Address(0, 0) & ")"
+                Counter = Counter + 1
+            Next i
+            Counter = ColNoFrom 'Reset Counter
+            Range("E" & rw).Value = "Total for Matter " & Range("D" & rw).Offset(-1, 0).Value & ":"
+            Range(Range(DLColFrom & rw), Range(DLColTo & rw)).Borders(xlEdgeBottom).LineStyle = xlDouble
+            Range(Range(DLColFrom & rw), Range(DLColTo & rw)).Font.Bold = True
+            rw = rw + SpacetoAdd
+        Else
+        End If
+    Loop
+
+    '|FORMAT NumberFormat on Column I to N
+    '|====================================
+    Range("J1:U1").EntireColumn.NumberFormat = "#,##0.00"
+    
+    '|CALCULATE GRAND TOTAL
+    '|=====================
+    LastRow = ActiveSheet.Range("H" & Rows.Count).End(xlUp).Offset(3).row
+    Debug.Print LastRow
+    Range(ActiveSheet.Range("A" & LastRow).Offset(3), ActiveSheet.Range("Z" & LastRow).Offset(3)).Select
+    
+        For i = 10 To 21 'Column J to U
+            Cells(LastRow, i).Formula = "=SUBTOTAL(9,OFFSET(" & Cells(8, i).Address(0, 0) & ",1,0):OFFSET(" _
+            & Cells(LastRow, i).Address(0, 0) & ",-1,0))"
+        Next i
+    
+    'MsgBox ("Completed")
+    Range(Range("A9"), Range("A10")).EntireRow.Delete 'Delete Empty Rows
+    
+    If ActiveSheet.Range("H" & Rows.Count).End(xlUp).row = 11 And Range("H9") = 0 And Range("H10") = 0 Then
+        Range(Range("A9"), Range("A10")).EntireRow.Delete
+    End If
+    
+    Range("A9").Activate
+'=============================================================
+'TO DEBUG FREEZE FROM HERE TO NEXT BOX
+'=============================================================
+    End If
+
+    'PROCESSED %
+    pctCompl = Int((ActiveSheet.Index - ENDOFLASTINDEX) / TOTALSHTCOUNTS * 100)
+    progressF pctCompl
+
+Next ws
+Application.DisplayAlerts = True
+
+Unload UserFormFormating
+'=============================================================
+'TO DEBUG FREEZE TO HERE
+'=============================================================
+
+End Sub

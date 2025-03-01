@@ -1,0 +1,73 @@
+'=====================================
+'| PRIVIATE SUB SUMMARY RPT CLR      |
+'=====================================
+Sub SUMMARY_RPT_CLR()
+Dim settings As New ClassModSettings
+settings.TurnOff 'Turn Off
+
+'|============================================|
+'|FIND ENDOFROW, IF NOT EXIST, EXIT SUB       |
+'|============================================|
+Dim FindName As String, SearchRg As Range, FindCell As Range
+FindName = "ENDOFROW"
+Set SearchRg = Range(ShtSummaryRpt.Range("A1"), ShtSummaryRpt.Range("A" & Rows.Count).End(xlUp))
+Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindCell Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            settings.TurnOn 'Turn On
+            Exit Sub
+        End If
+'|=======================|
+'|SORT                   |
+'|=======================|
+  Dim SortRg As Range, SortCol1 As Range, SortCol2 As Range
+    Set SortRg = Range(ShtSummaryRpt.Range("A8"), ShtSummaryRpt.Range("AE" & FindCell.Offset(-1).row))
+    Set SortCol1 = Range(ShtSummaryRpt.Range("A8"), ShtSummaryRpt.Range("A" & FindCell.Offset(-1).row))
+    Set SortCol2 = Range(ShtSummaryRpt.Range("B8"), ShtSummaryRpt.Range("B" & FindCell.Offset(-1).row))
+
+        ActiveSheet.Sort.SortFields.Clear
+        ActiveSheet.Sort.SortFields.Add Key _
+            :=SortCol1, SortOn:=xlSortOnValues, Order:=xlAscending, _
+            DataOption:=xlSortNormal
+        ActiveSheet.Sort.SortFields.Add Key _
+            :=SortCol2, SortOn:=xlSortOnValues, Order:=xlAscending, _
+            DataOption:=xlSortNormal
+        With ActiveSheet.Sort
+            .SetRange SortRg
+            .Header = xlGuess
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+'|=======================|
+'|FORMAT                 |
+'|=======================|
+'.LineStyle = xlDouble  / .LineStyle = xlContinuous
+'.Weight = xlHairline  /  .Weight = xlMedium  / .Weight = xlThick
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlEdgeTop).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlEdgeBottom).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlEdgeLeft).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlEdgeRight).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlInsideVertical).LineStyle = xlContinuous
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlInsideVertical).Weight = xlHairline
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlInsideHorizontal).LineStyle = xlContinuous
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & FindCell.row)).Borders(xlInsideHorizontal).Weight = xlHairline
+
+Range(ShtSummaryRpt.Range("N7"), ShtSummaryRpt.Range("S" & FindCell.row)).Borders(xlEdgeLeft).Weight = xlMedium
+Range(ShtSummaryRpt.Range("N7"), ShtSummaryRpt.Range("S" & FindCell.row)).Borders(xlEdgeRight).Weight = xlMedium
+
+Range(ShtSummaryRpt.Range("V7"), ShtSummaryRpt.Range("Y" & FindCell.row)).Borders(xlEdgeLeft).Weight = xlMedium
+Range(ShtSummaryRpt.Range("V7"), ShtSummaryRpt.Range("Y" & FindCell.row)).Borders(xlEdgeRight).Weight = xlMedium
+
+'|=======================|
+'|DELETE EMPTY ROWS      |
+'|=======================|
+If FindCell.Offset(-1).Value = "" Then
+    Range(FindCell.Offset(-1), FindCell.End(xlUp).Offset(1)).EntireRow.Delete
+End If
+
+FindCell.Activate
+settings.TurnOn 'Turn On
+
+End Sub

@@ -1,0 +1,135 @@
+Option Explicit
+
+Sub FORMAT_TB()
+    If ActiveWorkbook.codeName = "BALSHT_PNL_TB" Then
+        MsgBox ("Please do not run this macro on the actual workbook")
+        Exit Sub
+    End If
+    Dim settings As New ClassModSettings
+    settings.TurnOff 'Turn Off
+
+    'SELECT ENTIRE COLUMN
+    Columns("A:A").Select
+
+    'DO TEXT TO COLUMNS
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlFixedWidth, _
+        FieldInfo:=Array(Array(0, 1), Array(13, 1), Array(71, 1), Array(88, 1), Array(108, 1)) _
+        , TrailingMinusNumbers:=True
+            
+    'REMOVE EXCESS ROWS
+    Dim THEEND As Long
+    Dim SearchRange As Range
+    Dim FindRow1 As Range
+    Dim FindRow2 As Range
+    Dim DESROW As String
+    Dim NoOfRows As Double
+
+    'Delete excess rows and set Net Income as last row
+    THEEND = Range("A" & Rows.Count).End(xlUp).row
+    Set SearchRange = Range("A1:A" & THEEND)
+    Set FindRow1 = SearchRange.Find("Net Income =", LookIn:=xlValues, LookAt:=xlWhole)
+    Range(FindRow1.Offset(1, 0), Range("A" & Rows.Count).End(xlUp)).EntireRow.Delete
+
+    'DO TEXT TO COLUMS ON ** Current Activity Summary **
+    Set FindRow2 = SearchRange.Find("Assets", LookIn:=xlValues, LookAt:=xlWhole)
+    DESROW = FindRow2.Offset(-1, 1).row
+    Range(FindRow2.Offset(-1, 1), Range("B" & Rows.Count).End(xlUp)).Select
+
+    Selection.TextToColumns Destination:=Range("B" & DESROW), DataType:=xlFixedWidth _
+        , FieldInfo:=Array(Array(0, 1), Array(18, 1)), TrailingMinusNumbers:=True
+
+    Range(Range("B" & FindRow2.row), Range("C" & Rows.Count).End(xlUp)).Select
+
+        Selection.Replace What:="<", Replacement:="(", LookAt:=xlPart, _
+            SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+            ReplaceFormat:=False
+        Selection.Replace What:=">", Replacement:=")", LookAt:=xlPart, _
+            SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+            ReplaceFormat:=False
+
+    Dim LastRow As String
+    LastRow = Range("D" & Rows.Count).End(xlUp).row
+    Range("A6", Range("E" & LastRow)).Select
+
+        Selection.Replace What:="<", Replacement:="(", LookAt:=xlPart, _
+            SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+            ReplaceFormat:=False
+        Selection.Replace What:=">", Replacement:=")", LookAt:=xlPart, _
+            SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+            ReplaceFormat:=False
+
+    Range("A6", Range("E" & LastRow)).Select
+
+        ActiveSheet.Sort.SortFields.Clear
+        ActiveSheet.Sort.SortFields.Add key:=Range("D6", Range("D" & LastRow)) _
+            , SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        With ActiveSheet.Sort
+            .SetRange Range("A6", Range("E" & LastRow))
+            .Header = xlGuess
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+
+    Range(Range("D" & Rows.Count).End(xlUp).Offset(1, 0), Range("D" & LastRow)).EntireRow.Delete
+
+    Dim FloorRow As String, SelectedRow As String
+    FloorRow = Range("D" & Rows.Count).End(xlUp).row
+    SelectedRow = FloorRow
+    'MsgBox (FloorRow)
+    'MsgBox (SelectedRow)
+    Do Until IsNumeric(Range("D" & SelectedRow))
+        If Not IsNumeric(Range("D" & SelectedRow)) Then
+            SelectedRow = SelectedRow - 1
+    '            MsgBox (SelectedRow)
+        End If
+    Loop
+
+    'REMOVE JUNKS
+    Range(Range("D" & SelectedRow).Offset(1, 0), Range("D" & Rows.Count).End(xlUp)).EntireRow.Delete
+    'ADD SPACES
+    Range("D" & Rows.Count).End(xlUp).Offset(1, 0).EntireRow.Select
+        Selection.Insert Shift:=xlDown
+
+    Columns("A:E").Columns.AutoFit
+    Range("A6").Select
+    ActiveWindow.FreezePanes = True
+
+    Columns("A:E").Font.Name = "Arial"
+    Columns("A:E").Font.Size = 8
+
+    Dim SORTTO As String
+    SORTTO = Range("E" & Rows.Count).End(xlUp).row
+    Range("A6", Range("E" & SORTTO)).Select
+
+        ActiveSheet.Sort.SortFields.Clear
+        ActiveSheet.Sort.SortFields.Add key:=Range("A6", Range("A" & SORTTO)) _
+            , SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        With ActiveSheet.Sort
+            .SetRange Range("A6", Range("E" & SORTTO))
+            .Header = xlGuess
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+        
+    'ADD SPACES
+    Range("E" & Rows.Count).End(xlUp).Offset(1, 0).EntireRow.Select
+        Selection.Insert Shift:=xlDown
+
+    Range("E" & Rows.Count).End(xlUp).Offset(1, 0).Formula = "=SUM(E6:" & Range("E" & Rows.Count).End(xlUp).Address(0, 0) & ")"
+    Range("E" & Rows.Count).End(xlUp).Copy
+    Range(Range("E" & Rows.Count).End(xlUp).Offset(0, -2), Range("E" & Rows.Count).End(xlUp).Offset(0, -1)).Select
+    ActiveSheet.Paste
+
+    Range("C6", Range("E" & Rows.Count).End(xlUp)).NumberFormat = "#,##0.00"
+    Range(FindRow2.Offset(0, 1), Range("C" & Rows.Count).End(xlUp)).NumberFormat = "#,##0.00"
+    Range("E" & Rows.Count).End(xlUp).Select
+    NoOfRows = Range("E" & Rows.Count).End(xlUp).Offset(-1, 0).row - Range("E6").row + 1
+    MsgBox ("This Trial Balance has: " & NoOfRows & " rows.")
+
+    settings.TurnOn 'Turn On
+
+End Sub

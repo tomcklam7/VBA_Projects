@@ -1,0 +1,104 @@
+'=====================================
+'| SUBTOTAL BY ADJUSTER              |
+'=====================================
+Sub SUMMARY_BY_ADJUSTER()
+Dim settings As New ClassModSettings
+settings.TurnOff 'Turn Off
+
+Dim pctCompl As Single
+    
+    '|============================================|
+    '|FIND ENDOFROW, IF NOT EXIST, EXIT SUB       |
+    '|============================================|
+    Dim FindName As String, SearchRg As Range, FindCell As Range
+    FindName = "ENDOFROW"
+    Set SearchRg = Range(ShtSummaryRpt.Range("A1"), ShtSummaryRpt.Range("A" & Rows.Count).End(xlUp))
+    Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindCell Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            settings.TurnOn 'Turn On
+            Exit Sub
+        End If
+
+    '|============================================|
+    '|SET PERIMETER                               |
+    '|============================================|
+    Dim rw As Integer, BegRow As Integer, LastRow As Integer, Col As String, NewRow As Integer, RowstoAdd As Integer, j As Integer
+    BegRow = 7
+    LastRow = FindCell.Offset(-1).row
+    Col = "H" '<---------------------------------------------------- CHANGED HERE
+    RowstoAdd = 2
+    '|============================================|
+    '|ADD SPACES                                  |
+    '|============================================|
+    rw = LastRow ' To Row
+    Do
+        If Cells(rw, Col) <> Cells(rw - 1, Col) And Cells(rw, Col) <> "" Then
+            Rows(rw).Resize(RowstoAdd).Insert
+        End If
+        rw = rw - 1
+        pctCompl = Int((rw - LastRow) / (7 - LastRow) * 100)
+        progressR pctCompl
+    Loop Until rw <= BegRow
+
+    'ADD 2 MORE ROW ON LAST
+    Range(FindCell, FindCell.Offset(1)).EntireRow.Insert
+    
+    '|==============================================================|
+    '|INSERT 2 ROWS ON TOP IF A8 HAS SOMETHING AND F8 IS BLANK      |
+    '|==============================================================|
+    If Range("H8") <> 0 And Range("F8") = "" Then
+        Range(Range("A8"), Range("A8").Offset(1)).EntireRow.Insert
+    End If
+    '|============================================|
+    '|SUM AND DOUBLELINE                          |
+    '|============================================|
+    Dim ColumnFrom As String, ColumnTo As String, CellingRow As Integer, FloorRow As Integer
+    Dim DLColFrom As String, DLColTo As String, SpacetoAdd As Integer
+    Dim ColNoFrom As Long, ColNoTo As Long, Counter As Integer, i As Integer
+    
+    '|============================================|
+    '|SET PERIMETER                               |
+    '|============================================|
+    rw = 10 'From Row
+    Set SearchRg = Range(ShtSummaryRpt.Range("A1"), ShtSummaryRpt.Range("A" & Rows.Count).End(xlUp))
+    Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+    LastRow = FindCell.Offset(-3).row 'To Row
+    ColumnFrom = "N" 'Sum From "Letter"
+    ColumnTo = "Y" 'Sum To "Letter"
+    DLColFrom = "A" 'Doubleline From "Letter"
+    DLColTo = "AD" 'Doubleline To "Letter"
+    SpacetoAdd = 1
+
+    ColNoFrom = Range(ColumnFrom & 1).Column
+    ColNoTo = Range(ColumnTo & 1).Column
+    Counter = ColNoFrom
+
+    Do Until rw > LastRow
+        If Cells(rw, 1).Offset(-1, 0) = "" Then
+            CellingRow = rw
+        End If
+        If Cells(rw, 1).Offset(1, 0) = "" Then
+            FloorRow = rw
+        End If
+            rw = rw + 1
+        If Cells(rw, 1) = "" Then
+            For i = Counter To ColNoTo
+                Cells(rw, Counter).Formula = "=Subtotal(9," & Cells(CellingRow, Counter).Address(0, 0) & ":" _
+                & Cells(FloorRow, Counter).Address(0, 0) & ")"
+                Counter = Counter + 1
+            Next i
+            Counter = ColNoFrom 'Reset Counter
+            Range("G" & rw).Value = "Total for " & Range("H" & rw).Offset(-1).Value
+            Range(Range(DLColFrom & rw), Range(DLColTo & rw)).Borders(xlEdgeBottom).LineStyle = xlDouble
+            Range(Range(DLColFrom & rw), Range(DLColTo & rw)).Font.Bold = True
+            rw = rw + SpacetoAdd
+        Else
+        End If
+        pctCompl = Int((rw - 10) / (LastRow - 10) * 100)
+        progressR pctCompl
+    Loop
+Range(ShtSummaryRpt.Range("A8"), ShtSummaryRpt.Range("A9")).EntireRow.Delete
+ShtSummaryRpt.Range("A8").Select
+settings.TurnOn 'Turn On
+End Sub

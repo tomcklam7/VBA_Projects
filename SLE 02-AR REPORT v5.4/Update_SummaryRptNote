@@ -1,0 +1,107 @@
+Sub Update_SummaryRptNote()
+    Dim ARNoteArray As Variant
+    Dim lastRow As Long
+    Dim i As Long, matchRow As Long
+    Dim updateAll As Boolean
+    
+    'Unprotect sheet and turn off protection flag
+    ShtSummaryRpt.Unprotect
+    ShtSummaryRpt.Range("AG2").Value = "OFF"
+    
+    'Get the last row of data in ShtNewNote
+    With ShtNewNote
+        lastRow = .Cells(.Rows.Count, "A").End(xlUp).Row
+        
+        'Check if there's data to process
+        If lastRow < 4 Then
+            MsgBox "No data to process", vbInformation
+            'Turn protection back on before exiting
+            ShtSummaryRpt.Range("AG2").Value = "ON"
+            ShtSummaryRpt.Protect Password:="", _
+                DrawingObjects:=False, _
+                Contents:=True, _
+                Scenarios:=False, _
+                AllowFormattingCells:=False, _
+                AllowFormattingColumns:=False, _
+                AllowFormattingRows:=False, _
+                AllowInsertingColumns:=False, _
+                AllowInsertingRows:=False, _
+                AllowInsertingHyperlinks:=False
+            Exit Sub
+        End If
+        
+        'Read data into array
+        ARNoteArray = .Range("A4:F" & lastRow).Value
+        
+        'Get update mode from G1
+        updateAll = (UCase(.Range("G1").Value) = "YES")
+    End With
+    
+    'Process each row in the array
+    For i = 1 To UBound(ARNoteArray)
+        'Find matching invoice in ShtSummaryRpt
+        matchRow = 0
+        With ShtSummaryRpt
+            On Error Resume Next
+            matchRow = .Range("J:J").Find(ARNoteArray(i, 1), LookIn:=xlValues).Row
+            On Error GoTo 0
+            
+            If matchRow > 0 Then
+                If updateAll Then
+                    'Update all columns if G1 = Yes
+                    .Cells(matchRow, "Z").Value = ARNoteArray(i, 2) 'Color Code
+                    .Cells(matchRow, "AA").Value = ARNoteArray(i, 3) 'Left Blank
+                    .Cells(matchRow, "AB").Value = ARNoteArray(i, 4) 'Submission Date
+                    .Cells(matchRow, "AC").Value = ARNoteArray(i, 5) 'Internal Comments
+                    .Cells(matchRow, "AD").Value = ARNoteArray(i, 6) 'Comments for Attorney
+                Else
+                    'Update only columns that have values when G1 = No
+                    If Len(Trim(ARNoteArray(i, 2))) > 0 Then .Cells(matchRow, "Z").Value = ARNoteArray(i, 2) 'Color Code
+                    If Len(Trim(ARNoteArray(i, 3))) > 0 Then .Cells(matchRow, "AA").Value = ARNoteArray(i, 3) 'Left Blank
+                    If Len(Trim(ARNoteArray(i, 4))) > 0 Then .Cells(matchRow, "AB").Value = ARNoteArray(i, 4) 'Submission Date
+                    If Len(Trim(ARNoteArray(i, 5))) > 0 Then .Cells(matchRow, "AC").Value = ARNoteArray(i, 5) 'Internal Comments
+                    If Len(Trim(ARNoteArray(i, 6))) > 0 Then .Cells(matchRow, "AD").Value = ARNoteArray(i, 6) 'Comments for Attorney
+                End If
+            End If
+        End With
+    Next i
+    
+    'Turn protection back on
+    With ShtSummaryRpt
+        .Range("AG2").Value = "ON"
+        .Protect Password:="", _
+            DrawingObjects:=False, _
+            Contents:=True, _
+            Scenarios:=False, _
+            AllowFormattingCells:=False, _
+            AllowFormattingColumns:=False, _
+            AllowFormattingRows:=False, _
+            AllowInsertingColumns:=False, _
+            AllowInsertingRows:=False, _
+            AllowInsertingHyperlinks:=False, _
+            AllowDeletingColumns:=False, _
+            AllowDeletingRows:=False, _
+            AllowSorting:=True, _
+            AllowFiltering:=True, _
+            AllowUsingPivotTables:=False
+    End With
+    
+    MsgBox "Update complete", vbInformation
+End Sub
+
+Sub Update_SummaryRptNote_CLR()
+    Dim lastRow As Long
+    
+    With ShtNewNote
+        'Find the last used row in column A
+        lastRow = .Cells(.Rows.Count, "A").End(xlUp).Row
+        
+        'If there's data to clear (row 4 or beyond)
+        If lastRow >= 4 Then
+            'Clear contents from row 4 to last row, columns A through F
+            .Range("A4:F" & lastRow).ClearContents
+        End If
+    End With
+    
+    MsgBox "Sheet cleared", vbInformation
+End Sub

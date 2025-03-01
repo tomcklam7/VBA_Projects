@@ -1,0 +1,86 @@
+Sub CombineWorkbooks()
+    Dim FolderPath As String
+    Dim FileName As String
+    Dim WorkbookName As String
+    Dim CurrentWb As Workbook
+    Dim DestWb As Workbook
+    Dim ws As Worksheet
+    Dim LastRow As Long
+    Dim DestLastRow As Long
+    Dim BaseFileName As String
+    Dim TimeFormat As String
+    
+    ' Turn off screen updating and alerts for faster processing
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    ' Get values from worksheet
+    FolderPath = ThisWorkbook.Sheets(1).Range("B1").Value
+    BaseFileName = ThisWorkbook.Sheets(1).Range("B2").Value
+    TimeFormat = ThisWorkbook.Sheets(1).Range("B3").Value
+    
+    ' Validate inputs
+    If FolderPath = "" Then
+        MsgBox "Please enter a folder path in cell B1", vbExclamation
+        Exit Sub
+    End If
+    
+    If BaseFileName = "" Then
+        MsgBox "Please enter a file name in cell B2", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Create filename based on selected format
+    If TimeFormat = "Date and Time" Then
+        WorkbookName = BaseFileName & "_" & Format(Now(), "yyyy-mm-dd_hh:mm:ss")
+    ElseIf TimeFormat = "Date Only" Then
+        WorkbookName = BaseFileName & "_" & Format(Now(), "yyyy-mm-dd")
+    Else
+        MsgBox "Please select either 'Date and Time' or 'Date Only' in cell B3", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Create new workbook for combined data
+    Set DestWb = Workbooks.Add
+    
+    ' Get first file in folder
+    FileName = Dir(FolderPath & "\*.xls*")
+    
+    ' Loop through all Excel files in folder
+    Do While FileName <> ""
+        ' Skip the current workbook
+        If FileName <> ThisWorkbook.Name Then
+            ' Open workbook
+            Set CurrentWb = Workbooks.Open(FolderPath & "\" & FileName)
+            
+            ' Loop through all worksheets in current workbook
+            For Each ws In CurrentWb.Worksheets
+                ' Find last row in current worksheet
+                LastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+                
+                ' Find last row in destination workbook
+                DestLastRow = DestWb.Sheets(1).Cells(DestWb.Sheets(1).Rows.Count, "A").End(xlUp).Row
+                If DestLastRow = 1 Then DestLastRow = 0
+                
+                ' Copy used range to destination workbook
+                ws.UsedRange.Copy DestWb.Sheets(1).Cells(DestLastRow + 1, 1)
+            Next ws
+            
+            ' Close current workbook
+            CurrentWb.Close
+        End If
+        
+        ' Get next file
+        FileName = Dir
+    Loop
+    
+    ' Save combined workbook
+    DestWb.SaveAs FolderPath & "\" & WorkbookName & ".xlsx"
+    
+    ' Turn screen updating and alerts back on
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    
+    ' Notify user
+    MsgBox "All workbooks have been combined successfully!", vbInformation
+End Sub

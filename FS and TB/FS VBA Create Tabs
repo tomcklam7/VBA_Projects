@@ -1,0 +1,209 @@
+Option Explicit
+
+' Add these constants at the top
+Private Const TEMPLATE_SHEET As String = "TBXX"
+Private Const POSITION_MARKER As String = "-"
+
+' Modified WorksheetExists to only check existence
+Function WorksheetExists(TabName As String, Optional WB As Workbook) As Boolean
+    Dim sht As Worksheet
+    If WB Is Nothing Then Set WB = ThisWorkbook
+    On Error Resume Next
+    Set sht = WB.Sheets(TabName)
+    On Error GoTo 0
+    WorksheetExists = Not sht Is Nothing
+End Function
+
+' New function to validate workbook structure
+Private Function ValidateWorkbookStructure() As Boolean
+    On Error Resume Next
+    Dim templateExists As Boolean
+    Dim markerExists As Boolean
+    
+    templateExists = WorksheetExists(TEMPLATE_SHEET)
+    markerExists = WorksheetExists(POSITION_MARKER)
+    
+    If Not templateExists Then
+        MsgBox "Template sheet '" & TEMPLATE_SHEET & "' is missing!", vbCritical
+        ValidateWorkbookStructure = False
+        Exit Function
+    End If
+    
+    If Not markerExists Then
+        MsgBox "Position marker sheet '" & POSITION_MARKER & "' is missing!", vbCritical
+        ValidateWorkbookStructure = False
+        Exit Function
+    End If
+    
+    ValidateWorkbookStructure = True
+End Function
+
+' Modified CreateTab with error handling
+Sub CreateTab()
+    On Error GoTo ErrorHandler
+    
+    ' Use ClassModSettings to handle Application settings
+    Dim settings As New ClassModSettings
+    settings.TurnOff
+    
+    ' Validate workbook structure first
+    If Not ValidateWorkbookStructure() Then GoTo ExitSub
+    
+    Dim Name As String, ChkMonth As Variant
+    Dim createdCount As Integer
+    createdCount = 0
+    
+    For Each ChkMonth In Array("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
+        Name = ChkMonth
+        If ChkExistence(Name) Then
+            createdCount = createdCount + 1
+        End If
+    Next ChkMonth
+    
+    MsgBox "Process completed. " & createdCount & " sheets were created.", vbInformation
+    
+ExitSub:
+    settings.TurnOn
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description, vbCritical
+    Resume ExitSub
+End Sub
+
+' Modified ChkExistence to return success status
+Function ChkExistence(Name As String) As Boolean
+    Dim TabName As String
+    
+    Select Case Name
+        Case "JAN": TabName = "TB01"
+        Case "FEB": TabName = "TB02"
+        Case "MAR": TabName = "TB03"
+        Case "APR": TabName = "TB04"
+        Case "MAY": TabName = "TB05"
+        Case "JUN": TabName = "TB06"
+        Case "JUL": TabName = "TB07"
+        Case "AUG": TabName = "TB08"
+        Case "SEP": TabName = "TB09"
+        Case "OCT": TabName = "TB10"
+        Case "NOV": TabName = "TB11"
+        Case "DEC": TabName = "TB12"
+    End Select
+    
+    If Not WorksheetExists(TabName) Then
+        CreateName TabName
+        ChkExistence = True
+    Else
+        ChkExistence = False
+    End If
+End Function
+
+' Modified CreateName with error handling
+Private Sub CreateName(TabName As String)
+    On Error GoTo ErrorHandler
+    
+    Dim TableName As String
+    Dim MonthValue As String
+    
+    Select Case TabName
+        Case "TB01": 
+            TableName = "TB_JAN"
+            MonthValue = "JAN"
+        Case "TB02": 
+            TableName = "TB_FEB"
+            MonthValue = "FEB"
+        Case "TB03": 
+            TableName = "TB_MAR"
+            MonthValue = "MAR"
+        Case "TB04": 
+            TableName = "TB_APR"
+            MonthValue = "APR"
+        Case "TB05": 
+            TableName = "TB_MAY"
+            MonthValue = "MAY"
+        Case "TB06": 
+            TableName = "TB_JUN"
+            MonthValue = "JUN"
+        Case "TB07": 
+            TableName = "TB_JUL"
+            MonthValue = "JUL"
+        Case "TB08": 
+            TableName = "TB_AUG"
+            MonthValue = "AUG"
+        Case "TB09": 
+            TableName = "TB_SEP"
+            MonthValue = "SEP"
+        Case "TB10": 
+            TableName = "TB_OCT"
+            MonthValue = "OCT"
+        Case "TB11": 
+            TableName = "TB_NOV"
+            MonthValue = "NOV"
+        Case "TB12": 
+            TableName = "TB_DEC"
+            MonthValue = "DEC"
+    End Select
+    
+    Worksheets(TEMPLATE_SHEET).Copy Before:=Worksheets(POSITION_MARKER)
+    ActiveSheet.Name = TabName
+    ActiveSheet.Cells.Name = TableName
+    
+    ' Set the month value in cell H1
+    ActiveSheet.Range("H1").Value = MonthValue
+    
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "Error creating sheet " & TabName & ": " & Err.Description, vbCritical
+    On Error Resume Next
+    If WorksheetExists(TabName) Then
+        Worksheets(TabName).Delete
+    End If
+End Sub
+
+Sub DeleteAllTabs()
+    On Error GoTo ErrorHandler
+    
+    ' Use ClassModSettings to handle Application settings
+    Dim settings As New ClassModSettings
+    settings.TurnOff
+    
+    Dim ws As Worksheet
+    Dim deletedCount As Integer
+    Dim ChkMonth As Variant
+    Dim i As Integer
+    deletedCount = 0
+    
+    ' First, delete all named ranges
+    For Each ChkMonth In Array("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
+        On Error Resume Next
+        ThisWorkbook.Names("TB_" & ChkMonth).Delete
+        On Error GoTo ErrorHandler
+    Next ChkMonth
+    
+    ' Then delete all TB sheets
+    For i = 1 To 12
+        Dim tabName As String
+        tabName = "TB" & Format(i, "00")
+        
+        If WorksheetExists(tabName) Then
+            If tabName <> TEMPLATE_SHEET Then  ' Extra safety check
+                Worksheets(tabName).Delete
+                deletedCount = deletedCount + 1
+            End If
+        End If
+    Next i
+    
+    ' Activate TBXX sheet after deletion
+    Worksheets("TBXX").Activate
+    
+    MsgBox "Process completed. " & deletedCount & " sheets were deleted.", vbInformation
+    
+ExitSub:
+    settings.TurnOn
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description, vbCritical
+    Resume ExitSub
+End Sub

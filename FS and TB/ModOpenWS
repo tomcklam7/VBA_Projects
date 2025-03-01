@@ -1,0 +1,39 @@
+Option Explicit
+'=======================
+'READ OPENED WORKSBOOKS|
+'=======================
+Sub GetFileName(FileOnlyNoExt As String)
+    Dim filePath, FileOnly, PathOnly As String ', FileOnlyNoExt As String
+    
+    filePath = ActiveWorkbook.FullName 'File full path
+    FileOnly = ActiveWorkbook.Name ' File name Only
+    PathOnly = Left(filePath, Len(filePath) - Len(FileOnly)) 'Path only
+    FileOnlyNoExt = Left(FileOnly, Len(FileOnly) - 4) 'File name without extenstion
+    
+'    MsgBox FileOnlyNoExt
+End Sub
+'===============================================
+'READ OPEN WORKSBOOKS & PUT ON LISTOPENEDWS TAB|
+'===============================================
+Private Sub ListOpenWorkbooks()
+    Dim WB As Workbook
+    Dim i As Long
+    With ShtActiveSht.Range("A:A")
+        .ClearContents
+        i = 0
+        For Each WB In Application.Workbooks
+            If WB.Windows(1).Visible And WB.Name <> ThisWorkbook.Name Then
+                i = i + 1
+                ShtActiveSht.Cells(i, 1).Value = WB.Name
+            End If
+        Next WB
+    End With
+End Sub
+Private Sub GoToWB()
+'    MsgBox ThisWorkbook.Name
+    Application.Run "ListOpenWorkbooks"
+'    Dim GOTOWS As String
+'    GOTOWS = ActiveCell.Value
+'    Workbooks(GOTOWS).Activate
+'    Range("A1").Select
+End Sub

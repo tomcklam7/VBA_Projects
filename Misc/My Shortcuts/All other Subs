@@ -1,0 +1,186 @@
+Option Explicit
+Private Sub ResettoA1()
+    Range("A1").Select
+    ActiveWindow.ScrollRow = Selection.row
+End Sub
+Sub Check4Fields(CountBad As Long)
+    Dim settings As New ClassModSettings
+'    Dim CountBad As Long
+    Dim FindWord As Variant
+    Dim SearchRange As Range
+    Dim Rng As Range
+    Dim PMValue As Long, MValue As Long, FCValue As Long, INValue As Long, BDValue As Long, TDValue As Long
+    Dim PFMValue As Long, FBValue As Long, CBValue As Long, TBValue As Long, TPValue As Long, TWOValue As Long, TOSValue As Long
+    Dim CNValue As Long, ANValue As Long
+    
+    Set SearchRange = Range(Range("A1"), Range("A1").End(xlToRight))
+    CountBad = 0
+        For Each FindWord In Array _
+        ("Primary Matter", "Matter", "Full Caption", "Adjuster Name", "Claim Number", "Invoice Number", _
+        "Bill Date", "Through Date", "Percentage For Matter", "Fees", "Costs", "Total Billed", _
+        "Total Paid", "Total Written Off", "Total Outstanding")
+            Set Rng = Cells.Find(What:=FindWord, After:=ActiveCell, LookIn:=xlFormulas, _
+            LookAt:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+            MatchCase:=False, SearchFormat:=False)
+            If Not Rng Is Nothing Then
+    '            Debug.Print FindWord; " was found"
+                If Rng.Value = "Primary Matter" Then
+                    PMValue = Rng.Column
+                ElseIf Rng.Value = "Matter" Then
+                    MValue = Rng.Column
+                ElseIf Rng.Value = "Full Caption" Then
+                    FCValue = Rng.Column
+                ElseIf Rng.Value = "Adjuster Name" Then
+                    CNValue = Rng.Column
+                ElseIf Rng.Value = "Claim Number" Then
+                    ANValue = Rng.Column
+                ElseIf Rng.Value = "Invoice Number" Then
+                    INValue = Rng.Column
+                ElseIf Rng.Value = "Bill Date" Then
+                    BDValue = Rng.Column
+                ElseIf Rng.Value = "Through Date" Then
+                    TDValue = Rng.Column
+                ElseIf Rng.Value = "Percentage For Matter" Then
+                    PFMValue = Rng.Column
+                ElseIf Rng.Value = "Fees" Then
+                    FBValue = Rng.Column
+                ElseIf Rng.Value = "Costs" Then
+                    CBValue = Rng.Column
+                ElseIf Rng.Value = "Total Billed" Then
+                    TBValue = Rng.Column
+                ElseIf Rng.Value = "Total Paid" Then
+                    TPValue = Rng.Column
+                ElseIf Rng.Value = "Total Written Off" Then
+                    TWOValue = Rng.Column
+                ElseIf Rng.Value = "Total Outstanding" Then
+                    TOSValue = Rng.Column
+                End If
+            Else
+    '            Debug.Print FindWord; " was not found"
+                CountBad = CountBad + 1
+            End If
+        Next
+    If CountBad > 0 Then
+'        Some field were not found
+            MsgBox "This program was stopped because one or more of the following fields is/are missing: " & vbNewLine & vbNewLine & _
+            Chr(34) & "Primary Matter" & Chr(34) & vbNewLine & _
+            Chr(34) & "Matter" & Chr(34) & vbNewLine & _
+            Chr(34) & "Full Caption" & Chr(34) & vbNewLine & _
+            Chr(34) & "Adjuster Name" & Chr(34) & vbNewLine & _
+            Chr(34) & "Claim Number" & Chr(34) & vbNewLine & _
+            Chr(34) & "Invoice Number" & Chr(34) & vbNewLine & _
+            Chr(34) & "Bill Date" & Chr(34) & vbNewLine & _
+            Chr(34) & "Through Date" & Chr(34) & vbNewLine & _
+            Chr(34) & "Percentage For Matter" & Chr(34) & vbNewLine & _
+            Chr(34) & "Fees" & Chr(34) & vbNewLine & _
+            Chr(34) & "Costs" & Chr(34) & vbNewLine & _
+            Chr(34) & "Total Billed" & Chr(34) & vbNewLine & _
+            Chr(34) & "Total Paid" & Chr(34) & vbNewLine & _
+            Chr(34) & "Total Written Off" & Chr(34) & vbNewLine & _
+            Chr(34) & "Total Outstanding" & Chr(34) & vbNewLine & _
+            vbNewLine & "Please make sure the all the fields listed above are included on your AdHoc data. Then run again."
+        Exit Sub
+        settings.TurnOn 'Turn on
+    Else
+        Call Read_Write(PMValue, MValue, FCValue, CNValue, ANValue, INValue, BDValue, TDValue, PFMValue, FBValue, CBValue, TBValue, TPValue, TWOValue, TOSValue) ' Paste value to Read_n_Write
+    End If
+End Sub
+Sub Read_Write(PMValue As Long, MValue As Long, FCValue As Long, CNValue As Long, ANValue As Long, INValue As Long, BDValue As Long, TDValue As Long, _
+PFMValue As Long, FBValue As Long, CBValue As Long, TBValue As Long, TPValue As Long, TWOValue As Long, TOSValue As Long)
+    Dim ByMatter As Variant
+    Dim BegRow As Long
+    Dim LastRow As Long
+    Dim pctCompl As Single
+    Dim row As Long
+    'Dim Dimension2 As Long
+    'Read Data
+    BegRow = 1 ' For % Calculation
+    ByMatter = Range("A1").CurrentRegion.Value
+'    LastRow = Range("A1").CurrentRegion.Rows.Count
+    LastRow = UBound(ByMatter, 1)
+    ' Clear current sheet content
+    Cells.Clear
+    'Write Data
+        For row = 1 To LastRow
+            Cells(row, 1) = ByMatter(row, PMValue)
+            Cells(row, 2) = ByMatter(row, MValue)
+            Cells(row, 3) = ByMatter(row, FCValue)
+            Cells(row, 4) = ByMatter(row, CNValue)
+            Cells(row, 5) = ByMatter(row, ANValue)
+            Cells(row, 6) = ByMatter(row, INValue)
+            Cells(row, 7) = ByMatter(row, BDValue)
+            Cells(row, 8) = ByMatter(row, TDValue)
+            Cells(row, 9) = Format(ByMatter(row, PFMValue), "0.00%")
+            Cells(row, 10) = ByMatter(row, FBValue)
+            Cells(row, 11) = ByMatter(row, CBValue)
+            Cells(row, 12) = ByMatter(row, TBValue)
+            Cells(row, 13) = ByMatter(row, TPValue)
+            Cells(row, 14) = ByMatter(row, TWOValue)
+            Cells(row, 15) = ByMatter(row, TOSValue)
+        Next row
+        
+        pctCompl = Int((row) / _
+        (LastRow - BegRow) * 100)
+        progressR pctCompl
+                    
+        'Clear last row
+        Range("M" & Rows.Count).End(xlUp).EntireRow.ClearContents
+        
+        'Fix Billed Date
+        Columns(7).NumberFormat = "MM/DD/YY"
+        
+        'Fix Thru Date
+        Columns(8).NumberFormat = "MM/DD/YY"
+        
+        'Fix %
+        For row = 2 To Range("I" & Rows.Count).End(xlUp).row
+            Cells(row, 9) = Cells(row, 9).Value / 100
+        Next row
+End Sub
+
+'Sub SortBy(SortByWichCol As String)
+'    Dim SortRg As Range, SortCol1 As Range, SortCol2 As Range
+'    Set SortRg = Range("A2", Range("O" & Rows.Count).End(xlUp))
+'
+'    If SortByWichCol = "SortByBC" Then
+'        Set SortCol1 = Range("B2", Range("B" & Rows.Count).End(xlUp)) 'Matter ID
+'        Set SortCol2 = Range("C2", Range("C" & Rows.Count).End(xlUp)) 'Caption
+'    ElseIf SortByWichCol = "SortByCA" Then
+'        Set SortCol1 = Range("C2", Range("C" & Rows.Count).End(xlUp)) 'Caption
+'        Set SortCol2 = Range("B2", Range("B" & Rows.Count).End(xlUp)) 'Matter ID
+'    End If
+'
+'        ActiveSheet.Sort.SortFields.Clear
+'        ActiveSheet.Sort.SortFields.Add key _
+'            :=SortCol1, SortOn:=xlSortOnValues, Order:=xlAscending, _
+'            DataOption:=xlSortNormal
+'        ActiveSheet.Sort.SortFields.Add key _
+'            :=SortCol2, SortOn:=xlSortOnValues, Order:=xlAscending, _
+'            DataOption:=xlSortNormal
+'        With ActiveSheet.Sort
+'            .SetRange SortRg
+'            .Header = xlGuess
+'            .MatchCase = False
+'            .Orientation = xlTopToBottom
+'            .SortMethod = xlPinYin
+'            .Apply
+'        End With
+'End Sub
+
+Sub SaveDoc(SaveName As String)
+    Dim FolderPath As String, SaveAsName As String
+    Dim WB As Workbook
+    Set WB = ActiveWorkbook
+    Dim FileOnlyNoExt As String
+    
+    Call GetFileName(FileOnlyNoExt)
+    
+    FolderPath = Application.ActiveWorkbook.path
+                SaveAsName = VBA.Format(Now(), "YYYY-MM-DD_HH-MM-SS ")
+                ActiveWorkbook.SaveAs FileName:=FolderPath & "\" & SaveAsName & FileOnlyNoExt & ".xlsx", FileFormat:=51, _
+                Password:="", WriteResPassword:="", ReadOnlyRecommended:=False, CreateBackup:=False
+                ActiveWorkbook.Save
+End Sub
+Private Sub CleanExtraRows()
+    Range(Range("M" & Rows.Count).End(xlUp).Offset(1, 0), Cells.SpecialCells(xlCellTypeLastCell)).EntireRow.Delete
+End Sub

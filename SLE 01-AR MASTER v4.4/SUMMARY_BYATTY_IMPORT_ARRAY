@@ -1,0 +1,137 @@
+'================================
+'RUN RA SUMMARY (T-0 TEMPLATE)  |
+'================================
+Private Sub SUMMARY_BYATTY_IMPORT_ARRAY()
+Dim settings As New ClassModSettings
+settings.TurnOff 'Turn Off
+
+'SUMMARY_DELETE_BYATTY_TABS
+'SUMMARY_DELETE_BYATTY_BYCLIENT_TABS
+
+settings.TurnOff 'Turn Off
+
+Dim pctCompl As Single, TOTALROWS As String
+
+UserFormExportData.Show vbModeless
+UserFormExportData.Repaint
+Application.screenUpdating = False
+Application.StatusBar = "Updating in Progress, Please be patient..." 'Message on Status Bar
+   With UserFormExportData
+    .StartUpPosition = 0
+    .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+    .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+'     .Show
+   End With
+
+'SORT
+SUMMARY_SORTBY_CDG
+
+'READ ARRAY (Summary-Rpt)
+Dim SummaryRA() As Variant
+Dim Dimension1 As Long, Dimension2 As Long, Counter As Integer
+Dim ENDOFLASTINDEX As Long
+    
+    'DYNAMIC UBOUND
+    'Less 2 because last one is ENDOFROW and reduce one more because  it starts with zero
+    Dimension1 = Range(ShtSummaryRpt.Range("A8"), ShtSummaryRpt.Range("A8").End(xlDown)).Cells.Count - 2
+    ' From A to AD is 30 (updated from 28), less 1 because it starts with Zero
+    Dimension2 = 29  'Updated from 27 to account for 2 new columns
+    
+    'REDIM
+    ReDim SummaryRA(0 To Dimension1, 0 To Dimension2)
+    
+    'READ
+    For Dimension1 = LBound(SummaryRA, 1) To UBound(SummaryRA, 1)
+        For Dimension2 = LBound(SummaryRA, 2) To UBound(SummaryRA, 2)
+            SummaryRA(Dimension1, Dimension2) = ShtSummaryRpt.Range("A8").Offset(Dimension1, Dimension2).Value
+        Next Dimension2
+    Next Dimension1
+    
+'STORE DIMENSION TOTAL FOR % CALCULATION
+    TOTALROWS = Dimension1
+    
+settings.TurnOff 'Turn Off
+
+On Error GoTo ErrorHandler
+
+ENDOFLASTINDEX = Sht_END.Index - 1
+
+'WRITE ARRAY
+    'WRITE
+    For Dimension1 = LBound(SummaryRA, 1) To UBound(SummaryRA, 1)
+        Counter = Counter + 1
+        If Dimension1 = 0 Then 'First report
+            Sht_T0.Copy Before:=Sht_END
+            ActiveSheet.Name = SummaryRA(0, 2) & "-0"
+            ActiveSheet.Range("A3").Value = "Receiving Attorney - " & SummaryRA(0, 0)
+            ActiveSheet.Range("A4").Value = ActiveSheet.Range("A4").Value 'Turn formula to value
+            Counter = 0
+        ElseIf SummaryRA(Dimension1, 2) <> SummaryRA(Dimension1 - 1, 2) Then 'As long as Atty Initial is the same
+            Sht_T0.Copy Before:=Sht_END
+            ActiveSheet.Name = SummaryRA(Dimension1, 2) & "-0"
+            ActiveSheet.Range("A3").Value = "Receiving Attorney - " & SummaryRA(Dimension1, 0)
+            ActiveSheet.Range("A4").Value = ActiveSheet.Range("A4").Value 'Turn formula to value
+            Counter = 0
+        End If
+            Range("A9").Offset(Counter, 0).Value = SummaryRA(Dimension1, 3) 'A - Client ID
+            Range("A9").Offset(Counter, 1).Value = SummaryRA(Dimension1, 4) 'B - Client Name
+            Range("A9").Offset(Counter, 2).Value = SummaryRA(Dimension1, 2) 'C - Atty Initial (Hidden)
+            Range("A9").Offset(Counter, 3).Value = SummaryRA(Dimension1, 5) 'D - Matter ID
+            Range("A9").Offset(Counter, 4).Value = SummaryRA(Dimension1, 6) 'E - Matter Name
+            Range("A9").Offset(Counter, 5).Value = SummaryRA(Dimension1, 7) 'F - Adjuster
+            Range("A9").Offset(Counter, 6).Value = SummaryRA(Dimension1, 8) 'G - Claim No.
+            Range("A9").Offset(Counter, 7).Value = SummaryRA(Dimension1, 9) 'H - Invoice No.
+            Range("A9").Offset(Counter, 8).Value = SummaryRA(Dimension1, 12) 'I - Billed Date
+            Range("A9").Offset(Counter, 9).Value = SummaryRA(Dimension1, 13) 'J - Feess Billed
+            Range("A9").Offset(Counter, 10).Value = SummaryRA(Dimension1, 14) 'K - Costs Billed
+            Range("A9").Offset(Counter, 11).Value = SummaryRA(Dimension1, 15) 'L - Total Billed
+            Range("A9").Offset(Counter, 12).Value = SummaryRA(Dimension1, 16) 'M - Total Paid
+            Range("A9").Offset(Counter, 13).Value = SummaryRA(Dimension1, 17) 'N - Total Written Off
+            Range("A9").Offset(Counter, 14).Value = SummaryRA(Dimension1, 18) 'O - Total Outstanding
+            Range("A9").Offset(Counter, 15).Value = SummaryRA(Dimension1, 19) 'P - Fees Due
+            Range("A9").Offset(Counter, 16).Value = SummaryRA(Dimension1, 20) 'Q - Costs Due
+            Range("A9").Offset(Counter, 17).Value = SummaryRA(Dimension1, 21) 'R - Aging Period 01
+            Range("A9").Offset(Counter, 18).Value = SummaryRA(Dimension1, 22) 'S - Aging Period 02
+            Range("A9").Offset(Counter, 19).Value = SummaryRA(Dimension1, 23) 'T - Aging Period 03
+            Range("A9").Offset(Counter, 20).Value = SummaryRA(Dimension1, 24) 'U - Aging Period 04
+            Range("A9").Offset(Counter, 21).Value = SummaryRA(Dimension1, 25) 'V - Comment/Color Code
+            Range("A9").Offset(Counter, 22).Value = SummaryRA(Dimension1, 26) 'W - Comment/Blank
+            Range("A9").Offset(Counter, 23).Value = SummaryRA(Dimension1, 27) 'X - Comment/Submittion Date
+            Range("A9").Offset(Counter, 24).Value = SummaryRA(Dimension1, 28) 'Y - Comment/Internal Comments
+            Range("A9").Offset(Counter, 25).Value = SummaryRA(Dimension1, 29) 'Z - Comment/Comments for Attorney            
+            'PROCESSING PERCENTAGE
+            '=====================
+            pctCompl = Int((Dimension1) / TOTALROWS * 100)
+            progressE pctCompl
+    Next Dimension1
+
+    'ERASE
+    Erase SummaryRA
+
+'LOAD USERFORM ImportData
+'========================
+Unload UserFormExportData
+
+'LOAD USERFORM Formating
+'=======================
+SUMMARY_BYATTY_FORMAT_ARRAY (ENDOFLASTINDEX)
+
+'ULOAD USERFORM Formating, TIMER AND PROCESSING BAR
+'==================================================
+Application.screenUpdating = True
+Application.StatusBar = False 'Message on Status Bar - Off
+
+settings.TurnOn 'Turn On
+ShtSummaryRpt.Activate
+Exit Sub
+
+ErrorHandler:
+MsgBox "Report already ran, please delete reports first."
+If ActiveSheet.Name = "T-0 (2)" Then
+    ActiveSheet.Delete
+End If
+Unload UserFormExportData
+settings.TurnOn 'Turn On
+ShtSummaryRpt.Select
+
+End Sub

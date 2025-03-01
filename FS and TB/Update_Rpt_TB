@@ -1,0 +1,37 @@
+Sub Update_Rpt_TB()
+    '*** Declare variables ***
+    Dim Lastcell As Range, getLastCell As Range, SummaryRg As Range, ActiveSummaryRg As Range
+    
+    '*** Copy header values from active sheet ***
+    Sht_RPT_TB.Range("G1") = ActiveSheet.Range("G1").Value
+    Sht_RPT_TB.Range("H1") = ActiveSheet.Range("H1").Value
+    
+    '*** Get last used row in both sheets ***
+    Set getLastCell = ActiveSheet.Range("E" & Rows.Count).End(xlUp)    'Last row in active sheet
+    Set Lastcell = Sht_RPT_TB.Range("E" & Rows.Count).End(xlUp)       'Last row in RPT_TB sheet
+    
+    '*** Adjust number of rows if needed ***
+    If getLastCell.row - Lastcell.row > 0 Then 
+        'Add rows if active sheet has more rows
+        Sht_RPT_TB.Rows(Lastcell.row).Resize(getLastCell.row - Lastcell.row).Insert Shift:=xlDown
+    ElseIf getLastCell.row - Lastcell.row < 0 Then 
+        'Delete excess rows if RPT_TB has more rows than needed
+        Sht_RPT_TB.Rows(7).Resize(Lastcell.row - getLastCell.row).Delete Shift:=xlUp
+    End If
+    
+    '*** Copy main data range (A7:E[last row]) ***
+    Range(Sht_RPT_TB.Range("A7"), Sht_RPT_TB.Range("E" & getLastCell.Offset(-1).row)).Value = _
+    Range(ActiveSheet.Range("A7"), ActiveSheet.Range("E" & getLastCell.Offset(-1).row)).Value
+    
+    '*** Define summary ranges (5x2 range, 4 rows below last data row) ***
+    'Summary range in RPT_TB sheet
+    Set SummaryRg = Range(Sht_RPT_TB.Range("E" & Rows.Count).End(xlUp).Offset(4, -2), _
+    Sht_RPT_TB.Range("E" & Rows.Count).End(xlUp).Offset(8, -1))
+    
+    'Summary range in active sheet
+    Set ActiveSummaryRg = Range(ActiveSheet.Range("E" & Rows.Count).End(xlUp).Offset(4, -2), _
+    ActiveSheet.Range("E" & Rows.Count).End(xlUp).Offset(8, -1))
+    
+    '*** Copy summary data ***
+    SummaryRg.Value = ActiveSummaryRg.Value
+End Sub

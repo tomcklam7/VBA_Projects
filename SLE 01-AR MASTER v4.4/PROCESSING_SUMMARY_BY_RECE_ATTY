@@ -1,0 +1,43 @@
+'=====================================
+'| PROCESSING BAR SUMMARY BY RA      |
+'=====================================
+Sub PROCESSING_SUMMARY_BY_RECE_ATTY()
+Dim settings As New ClassModSettings
+settings.TurnOff 'Turn Off
+
+SUMMARY_RPT_CLR
+SUMMARY_SORTBY_ADG
+
+Dim StartTime As Date, RunTime As String
+StartTime = Now()
+
+UserForm1.Show vbModeless
+UserForm1.Repaint
+
+Application.screenUpdating = False
+Application.StatusBar = "Updating in Progress, Please be patient..." 'Message on Status Bar
+   With UserForm1
+    .StartUpPosition = 0
+    .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+    .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+'     .Show
+   End With
+'======================================
+Call SUMMARY_BY_RECE_ATTY 'RUN MACRO
+'======================================
+Unload UserForm1
+Application.screenUpdating = True
+Application.StatusBar = False 'Message on Status Bar - Off
+
+If Round((Now() - StartTime) * 24 * 60 * 60, 0) > 60 Then
+    RunTime = Int((Now() - StartTime) * 24 * 60) & " Minutes & " _
+    & Int(((Now() - StartTime) * 24 * 60 - Int((Now() - StartTime) * 24 * 60)) * 60) & " Seconds"
+Else
+    RunTime = Round((Now() - StartTime) * 24 * 60 * 60, 0) & " Seconds"
+End If
+
+MsgBox ("Update completed" & vbNewLine & vbNewLine _
+        & "Time taken to run this Macro = " & RunTime)
+settings.TurnOn 'Turn On
+End Sub
+

@@ -1,0 +1,57 @@
+'=======================================
+'| PROCESSING BAR SUMMARY BY CLIENT ID |
+'=======================================
+Sub PROCESSING_SUMMARY_BY_CLIENTID()
+
+SUMMARY_RPT_CLR
+SUMMARY_SORTBY_DG
+
+'|============================================|
+'|PROMPT TO DELETE BLANK FIRST                |
+'|============================================|
+Dim i As Integer
+If Range("A8") <> 0 And Range("D8") = "" Then
+    For i = 8 To Range("D" & Rows.Count).End(xlUp).row
+        If Cells(i, 4) <> "" Then
+            Dim settings As New ClassModSettings
+            settings.TurnOn 'Turn On
+            Range(Range("A8"), Range("S" & i - 1)).Select
+            MsgBox ("The selected section has no client ID, " _
+            & "please check and consider deleting them. Thanks.")
+            Exit Sub
+        End If
+    Next i
+End If
+
+Dim StartTime As Date, RunTime As String
+StartTime = Now()
+
+UserForm1.Show vbModeless
+UserForm1.Repaint
+
+Application.screenUpdating = False
+'Message on Status Bar
+Application.StatusBar = "Updating in Progress, Please be patient..."
+   With UserForm1
+    .StartUpPosition = 0
+    .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+    .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+'     .Show
+   End With
+'======================================
+Call SUMMARY_BY_CLIENTID 'RUN MACRO
+'======================================
+Unload UserForm1
+Application.screenUpdating = True
+Application.StatusBar = False 'Message on Status Bar - Off
+
+If Round((Now() - StartTime) * 24 * 60 * 60, 0) > 60 Then
+    RunTime = Int((Now() - StartTime) * 24 * 60) & " Minutes & " _
+    & Int(((Now() - StartTime) * 24 * 60 - Int((Now() - StartTime) * 24 * 60)) * 60) & " Seconds"
+Else
+    RunTime = Round((Now() - StartTime) * 24 * 60 * 60, 0) & " Seconds"
+End If
+
+MsgBox ("Update completed" & vbNewLine & vbNewLine _
+        & "Time taken to run this Macro = " & RunTime)
+End Sub

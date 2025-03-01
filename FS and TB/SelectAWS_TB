@@ -1,0 +1,41 @@
+Option Explicit
+Private Sub Button_Select_Click()
+    On Error Resume Next
+    Dim GOTOWS As String
+    GOTOWS = ListBox1.Value
+    Workbooks(GOTOWS).Activate
+'    MsgBox ListBox1.Value
+    Range("A1").Select
+    Unload SelectAWS_TB
+    
+    If ActiveWorkbook.Name = ThisWorkbook.Name Then
+    Else
+        Application.Run "Import_TB"
+    End If
+End Sub
+Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
+    On Error Resume Next
+    Dim GOTOWS As String
+    GOTOWS = ListBox1.Value
+    Workbooks(GOTOWS).Activate
+'    MsgBox ListBox1.Value
+    Range("A1").Select
+    Unload SelectAWS_TB
+    
+    If ActiveWorkbook.Name = ThisWorkbook.Name Then
+    Else
+        Application.Run "Import_TB"
+    End If
+End Sub
+Private Sub UserForm_Initialize()
+    Application.Run "ListOpenWorkbooks"
+    Dim rngData As Range
+    Set rngData = ShtActiveSht.Range("A1").CurrentRegion
+    ListBox1.ColumnCount = ShtActiveSht.Range("A" & Rows.Count).End(xlUp).row
+'    Set rngData = rngData.Resize(rngData.Rows.Count - 1).Offset(1)
+    ListBox1.RowSource = rngData.Parent.Name & "!" & rngData.Address
+End Sub
+Private Sub Button_Cancel_Click()
+    Unload SelectAWS_TB
+End Sub
+

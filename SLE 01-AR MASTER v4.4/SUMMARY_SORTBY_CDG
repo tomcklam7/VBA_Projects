@@ -1,0 +1,49 @@
+'=====================================
+'| PRIVIATE SUB SORT CDG             |
+'=====================================
+Private Sub SUMMARY_SORTBY_CDG()
+
+'|============================================|
+'|FIND ENDOFROW, IF NOT EXIST, EXIT SUB       |
+'|============================================|
+Dim FindName As String, SearchRg As Range, FindCell As Range
+FindName = "ENDOFROW"
+Set SearchRg = Range(ShtSummaryRpt.Range("A1"), ShtSummaryRpt.Range("A" & Rows.Count).End(xlUp))
+Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindCell Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            Exit Sub
+        End If
+        
+SUMMARY_RPT_CLR
+
+'|=======================|
+'|SORT                   |
+'|=======================|
+
+  Dim SortRg As Range, SortCol1 As Range, SortCol2 As Range, SortCol3 As Range
+    Set SortRg = Range(ShtSummaryRpt.Range("A8"), ShtSummaryRpt.Range("AG" & FindCell.Offset(-1).row)) ' A8 TO AG ENDROW (updated from AE)
+    Set SortCol1 = Range(ShtSummaryRpt.Range("C8"), ShtSummaryRpt.Range("C" & FindCell.Offset(-1).row))
+    Set SortCol2 = Range(ShtSummaryRpt.Range("D8"), ShtSummaryRpt.Range("D" & FindCell.Offset(-1).row))
+    Set SortCol3 = Range(ShtSummaryRpt.Range("G8"), ShtSummaryRpt.Range("G" & FindCell.Offset(-1).row))
+
+        ActiveSheet.Sort.SortFields.Clear
+        ActiveSheet.Sort.SortFields.Add Key _
+            :=SortCol1, SortOn:=xlSortOnValues, Order:=xlAscending, _
+            DataOption:=xlSortNormal
+        ActiveSheet.Sort.SortFields.Add Key _
+            :=SortCol2, SortOn:=xlSortOnValues, Order:=xlAscending, _
+            DataOption:=xlSortNormal
+        ActiveSheet.Sort.SortFields.Add Key _
+            :=SortCol3, SortOn:=xlSortOnValues, Order:=xlAscending, _
+            DataOption:=xlSortNormal
+        With ActiveSheet.Sort
+            .SetRange SortRg
+            .Header = xlGuess
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+End Sub
+

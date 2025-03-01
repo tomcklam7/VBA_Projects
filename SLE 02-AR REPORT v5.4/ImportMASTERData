@@ -1,0 +1,166 @@
+Sub ImportMASTERData()
+Dim settings As New ClassModSettings
+
+settings.TurnOff 'Turn off
+
+    ' Show the UserForm
+    With UserForm_Blank
+     .StartUpPosition = 0
+     .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+     .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+     .Show vbModeless
+    End With
+'    UserForm_Blank.Show vbModeless ' Show the UserForm modelessly
+
+    'Assign Workbooks
+    Dim WB1 As Workbook 'DataWorkbook
+    Dim WB2 As Workbook 'Macro Workbook
+    Dim WB1WS As Object
+
+    Set WB1 = ActiveWorkbook 'DataWorkbook
+    Set WB2 = ThisWorkbook 'Macro Workbook
+    
+    WB1.Activate
+'    MsgBox WB1.Name
+    On Error Resume Next
+    ' Attempt to find the worksheet using its codename
+    Set WB1WS = WB1.Worksheets(CStr(WB1.VBProject.VBComponents("ShtSummaryRpt").Properties(7)))
+    On Error GoTo 0 ' Turn off error handling
+    
+    If WB1WS Is Nothing Then
+        ' If WB1WS is Nothing, the worksheet was not found
+        MsgBox "Worksheet with codename 'ShtSummaryRpt' not found in workbook '" & WB1.Name & "'.", vbExclamation, "Worksheet Not Found"
+        UserForm_Blank.Hide
+        settings.TurnOn 'Turn on
+        Exit Sub
+    Else
+        ' Activate the found worksheet
+        WB1WS.Activate
+    End If
+    
+    Dim HowManyRows As Long, AddHowManyRows As Long
+    
+    'Check if "ENDOFROW Exists, if not, exit
+    Dim FindName As String, SearchRg As Range, FindCell As Range
+    FindName = "ENDOFROW"
+    Set SearchRg = Range(Range("A1"), Range("A" & Rows.Count).End(xlUp))
+    Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindCell Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            UserForm_Blank.Hide
+            settings.TurnOn 'Turn on
+            Exit Sub
+        End If
+
+    HowManyRows = FindCell.Offset(-1).row - 7
+    Debug.Print HowManyRows
+
+    '======================================
+    ' READ DATA INTO ARRAY
+    '======================================
+    Dim OldARData() As Variant
+    Dim StartRow As Long, EndRow As Long, DataRange As Range
+    
+    ' Set the start row (row 8) and end row (row above "ENDOFROW")
+    StartRow = 8
+    EndRow = FindCell.row - 1
+    
+    ' Check if there is a valid range to read
+    If StartRow > EndRow Then
+        MsgBox "No valid data range found between row 8 and the row above 'ENDOFROW'.", vbExclamation, "Invalid Range"
+        UserForm_Blank.Hide
+        settings.TurnOn ' Turn on
+        Exit Sub
+    End If
+    
+    ' Define the range to read from column A to column AG
+    Set DataRange = WB1WS.Range("A" & StartRow & ":AG" & EndRow)
+    
+    ' Read the data into the array
+    OldARData = DataRange.Value
+    
+'    ' Optional: Display a confirmation message
+'    MsgBox "Data successfully loaded into OldARData array.", vbInformation, "Data Loaded"
+
+    WB2.Activate
+    ShtSummaryRpt.Activate
+
+'    MsgBox WB2.Name
+    
+    'Check if "ENDOFROW Exists, if not, exit
+    FindName = "ENDOFROW"
+    Set SearchRg = Range(Range("A1"), Range("A" & Rows.Count).End(xlUp))
+    Set FindCell = SearchRg.Find(What:=FindName, MatchCase:=False, LookAt:=xlPart, LookIn:=xlValues)
+        If FindCell Is Nothing Then 'If Nothing
+            MsgBox Chr(34) & "ENDOFROW" & Chr(34) & " not found, please fix first!" 'If "ENDOFROW" Not Found
+            UserForm_Blank.Hide
+            settings.TurnOn 'Turn on
+            ShtSummaryRpt.Range("AG2").Value = "ON"
+            Exit Sub
+        End If
+        
+    'Clear All Formats before writing data
+    If Range("S" & Rows.Count).End(xlUp).Offset(-1).Value = "" Then 'To avoid runing if contents were already cleared.
+    'Do Nothing
+    Else
+        SUMMARY_RPT_CLR
+'        SUMMARY_RPT_AUTOADJROWS
+'        SUMMARY_RPT_COLOR_CLR
+        FILTER_CLR
+        settings.TurnOff 'Turn off
+    End If
+    
+    'Delete Data
+    ActiveSheet.Unprotect
+    Range("A8", "AD" & FindCell.Offset(-1).row).ClearContents    ' Clear all columns A through AD at once
+
+    Dim srcRange As Range, destRange As Range
+    AddHowManyRows = HowManyRows - (FindCell.row - Range("A7").row - 1) 'Title Row 'Add one more row to make keep filter working
+    If AddHowManyRows > 0 Then
+        Range(FindCell, FindCell.Offset(AddHowManyRows - 1)).EntireRow.Insert
+        Set srcRange = Range("AF8:AG8")
+        Set destRange = Range(Range("AF" & Rows.Count).End(xlUp), Range("AF" & Rows.Count).End(xlUp).Offset(-1, 1))
+        srcRange.Copy Destination:=destRange
+        
+    ElseIf AddHowManyRows < 0 Then
+        Range("A8", Range("A8").Offset(-AddHowManyRows - 1)).EntireRow.Delete
+'        Debug.Print Range("A8", Range("A8").Offset(-AddHowManyRows - 1)).Address
+'        Debug.Print "Less than 0"
+    ElseIf AddHowManyRows = 0 Then
+    End If
+
+    '======================================
+    ' WRITE ARRAY DATA TO ACTIVESHEET
+    '======================================
+    Dim rowIndex As Long, colIndex As Long
+    Dim destRow As Long, destCol As Long
+
+    ' Starting row for writing
+    destRow = 8
+
+    ' Loop through each row in the array
+    For rowIndex = LBound(OldARData, 1) To UBound(OldARData, 1)
+        ' Write columns A to AD (1 to 30)
+        For colIndex = 1 To 30
+            ActiveSheet.Cells(destRow, colIndex).Value = OldARData(rowIndex, colIndex)
+        Next colIndex
+        
+        destRow = destRow + 1
+    Next rowIndex
+    
+    'ERASE
+    Erase OldARData
+   
+    ShtSummaryRpt.Range("AG2").Value = "ON"
+    
+    SUMMARY_RPT_COLOR
+    SUMMARY_RPT_AUTOADJROWS
+    
+    Range("AI1").Value = Date
+    ActiveSheet.Protect
+    ' Hide the UserForm when the macro finishes
+    UserForm_Blank.Hide
+    
+settings.TurnOn 'Turn on
+
+End Sub

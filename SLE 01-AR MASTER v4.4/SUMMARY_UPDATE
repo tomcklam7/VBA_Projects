@@ -1,0 +1,148 @@
+'=====================================
+'| IMPORT DATA FROM SUMMARY DATA     |
+'=====================================
+Sub SUMMARY_UPDATE()
+Dim settings As New ClassModSettings
+settings.TurnOff 'Turn Off
+
+Dim EndRow As Long, i As Long
+
+'LOAD TIMER AND PROCESSING BAR
+'=============================
+Dim StartTime As Date, RunTime As String
+Dim pctCompl As Single, TOTALROWS As String
+StartTime = Now()
+
+UserForm1.Show vbModeless
+UserForm1.Repaint
+
+Application.screenUpdating = False
+Application.StatusBar = "Updating in Progress, Please be patient..." 'Message on Status Bar
+   With UserForm1
+    .StartUpPosition = 0
+    .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+    .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+'     .Show
+   End With
+
+'DELETE DATA
+'==========
+Range(ShtSummaryRpt.Range("A8"), ShtSummaryRpt.Range("S" & Rows.Count).End(xlUp)).EntireRow.Delete
+
+'READ ARRAY
+'==========
+Dim SummaryRA() As Variant
+Dim Dimension1 As Long, Dimension2 As Long, Counter As Integer
+    
+    'DYNAMIC UBOUND
+    'Less 2 because last one is ENDOFROW and reduce one more because  it starts with zero
+    Dimension1 = Range(ShtSummaryData.Range("A8"), ShtSummaryData.Range("A8").End(xlDown)).Cells.Count - 2
+    ' From A to AD is 30 (was 28), less one because it starts with Zero
+    Dimension2 = 29  'Changed from 27 to 29 to accommodate 2 new columns
+    
+    'REDIM
+    ReDim SummaryRA(0 To Dimension1, 0 To Dimension2)
+    
+    'READ
+    For Dimension1 = LBound(SummaryRA, 1) To UBound(SummaryRA, 1)
+        For Dimension2 = LBound(SummaryRA, 2) To UBound(SummaryRA, 2)
+            SummaryRA(Dimension1, Dimension2) = ShtSummaryData.Range("A8").Offset(Dimension1, Dimension2).Value
+        Next Dimension2
+    Next Dimension1
+
+'STORE DIMENSION TOTAL FOR % CALCULATION
+'=======================================
+    TOTALROWS = Dimension1
+
+'WRITE ARRAY
+'===========
+    'WRITE
+    For Dimension1 = LBound(SummaryRA, 1) To UBound(SummaryRA, 1)
+        For Dimension2 = LBound(SummaryRA, 2) To UBound(SummaryRA, 2)
+            ShtSummaryRpt.Range("A8").Offset(Dimension1, Dimension2).Value = SummaryRA(Dimension1, Dimension2)
+        Next Dimension2
+                
+        'PROCESSING PERCENTAGE
+        '=====================
+        pctCompl = Int((Dimension1) / TOTALROWS * 100)
+        progressR pctCompl
+        
+    Next Dimension1
+
+    'ERASE
+    Erase SummaryRA
+
+'PUT ENDOFROW
+'===========
+EndRow = ShtSummaryRpt.Range("J" & Rows.Count).End(xlUp).Offset(1).row
+Range("A" & EndRow).Value = "ENDOFROW"
+Range("A" & EndRow).Font.ThemeColor = xlThemeColorDark1
+Range("A" & EndRow).Font.TintAndShade = -0.249977111117893
+
+Range("N1:Y1").EntireColumn.NumberFormat = "#,##0.00"
+
+'FORMAT
+'===========
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlEdgeTop).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlEdgeBottom).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlEdgeLeft).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlEdgeRight).Weight = xlMedium
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlInsideVertical).LineStyle = xlContinuous
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlInsideVertical).Weight = xlHairline
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlInsideHorizontal).LineStyle = xlContinuous
+Range(ShtSummaryRpt.Range("A7"), ShtSummaryRpt.Range("AD" & EndRow)).Borders(xlInsideHorizontal).Weight = xlHairline
+
+Range(ShtSummaryRpt.Range("N7"), ShtSummaryRpt.Range("S" & EndRow)).Borders(xlEdgeLeft).Weight = xlMedium
+Range(ShtSummaryRpt.Range("N7"), ShtSummaryRpt.Range("S" & EndRow)).Borders(xlEdgeRight).Weight = xlMedium
+
+Range(ShtSummaryRpt.Range("T7"), ShtSummaryRpt.Range("U" & EndRow)).Borders(xlEdgeLeft).Weight = xlMedium
+Range(ShtSummaryRpt.Range("T7"), ShtSummaryRpt.Range("U" & EndRow)).Borders(xlEdgeRight).Weight = xlMedium
+
+Range(ShtSummaryRpt.Range("V7"), ShtSummaryRpt.Range("Y" & EndRow)).Borders(xlEdgeLeft).Weight = xlMedium
+Range(ShtSummaryRpt.Range("V7"), ShtSummaryRpt.Range("Y" & EndRow)).Borders(xlEdgeRight).Weight = xlMedium
+
+
+Range(ShtSummaryRpt.Range("A" & EndRow), ShtSummaryRpt.Range("AD" & EndRow)).Font.Bold = True
+Range(ShtSummaryRpt.Range("A" & EndRow), ShtSummaryRpt.Range("AD" & EndRow)).Interior.PatternColorIndex = xlAutomatic
+Range(ShtSummaryRpt.Range("A" & EndRow), ShtSummaryRpt.Range("AD" & EndRow)).Interior.TintAndShade = -0.249977111117893
+
+'|SET PRINT AREA
+'|==============
+ActiveSheet.PageSetup.PrintArea = Range(ShtSummaryRpt.Range("A8"), ShtSummaryRpt.Range("AD" & EndRow)).Address(0, 0)
+
+'|SUBTOTAL
+'|==============
+    For i = 14 To 25 'Column I to N
+        Cells(EndRow, i).Formula = "=SUBTOTAL(9,OFFSET(" & Cells(7, i).Address(0, 0) & ",1,0):OFFSET(" _
+        & Cells(EndRow, i).Address(0, 0) & ",-1,0))"
+    Next i
+
+ShtSummaryRpt.Range("A" & EndRow).RowHeight = 27.75
+
+'|PUT NUMBER ON TEMPLATE->
+'|=========================
+    Sht_Template.Range("B6").Value = Range("A" & EndRow).Offset(0, 21).Value
+    Sht_Template.Range("C6").Value = Range("A" & EndRow).Offset(0, 22).Value
+    Sht_Template.Range("D6").Value = Range("A" & EndRow).Offset(0, 23).Value
+    Sht_Template.Range("E6").Value = Range("A" & EndRow).Offset(0, 24).Value
+    Sht_Template.Range("F8").Value = Range("A" & EndRow).Offset(0, 18).Value
+
+'ULOAD USERFORM Formating, TIMER AND PROCESSING BAR
+'==================================================
+Unload UserForm1
+Application.screenUpdating = True
+Application.StatusBar = False 'Message on Status Bar - Off
+
+If Round((Now() - StartTime) * 24 * 60 * 60, 0) > 60 Then
+    RunTime = Int((Now() - StartTime) * 24 * 60) & " Minutes & " _
+    & Int(((Now() - StartTime) * 24 * 60 - Int((Now() - StartTime) * 24 * 60)) * 60) & " Seconds"
+Else
+    RunTime = Round((Now() - StartTime) * 24 * 60 * 60, 0) & " Seconds"
+End If
+
+MsgBox ("Update completed" & vbNewLine & vbNewLine _
+        & "Time taken to run this Macro = " & RunTime)
+
+settings.TurnOn 'Turn On
+End Sub
+
