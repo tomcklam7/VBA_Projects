@@ -119,8 +119,9 @@ PFMValue As Long, FBValue As Long, CBValue As Long, TBValue As Long, TPValue As 
             Cells(row, 15) = ByMatter(row, TOSValue)
         Next row
         
-        pctCompl = Int((row) / _
+        pctCompl = Int(((row - BegRow) / _
         (LastRow - BegRow) * 100)
+        If pctCompl > 100 Then pctCompl = 100
         progressR pctCompl
                     
         'Clear last row
