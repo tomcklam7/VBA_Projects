@@ -120,7 +120,7 @@ PFMValue As Long, FBValue As Long, CBValue As Long, TBValue As Long, TPValue As 
         Next row
         
         pctCompl = Int(((row - BegRow) / _
-        (LastRow - BegRow) * 100)
+        (LastRow - BegRow)) * 100)
         If pctCompl > 100 Then pctCompl = 100
         progressR pctCompl
                     
