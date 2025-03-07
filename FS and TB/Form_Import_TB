@@ -18,7 +18,7 @@ Sub Form_Import_TB()
         If GOTOWS = "" Then
             MsgBox "Please open a data worksheet first!"
         Else
-            On Error Resume Next
+            On Error Resume Next 
             Workbooks(GOTOWS).Activate
             If Err.Number <> 0 Then
                 MsgBox "Could not find workbook: " & GOTOWS
@@ -89,7 +89,7 @@ Sub Import_TB()
     ' Get period string from cell below Trial Balance
     PeriodStr = TBCell.Offset(1, 0).Text
     
-    ' Extract month from period string
+    ' Extract month and year from period string
     If InStr(PeriodStr, "through ") > 0 Then
         ' Get the text after "through " (will be like "02-24" or "07-26")
         Dim monthYearStr As String
@@ -98,9 +98,30 @@ Sub Import_TB()
         ' Extract the first 2 characters which represent the month
         intMonth = Val(Left(monthYearStr, 2))
         
+        ' Extract the year (assuming the year is the last two characters)
+        Dim intYear As Integer
+        intYear = Val(Right(monthYearStr, 2))
+        
+        ' Convert to four-digit year (assuming 20th or 21st century)
+        If intYear < 50 Then
+            intYear = 2000 + intYear
+        Else
+            intYear = 1900 + intYear
+        End If
+        
         ' Validate month is between 1 and 12
         If intMonth < 1 Or intMonth > 12 Then
             MsgBox "Invalid month found in period string: " & monthYearStr, vbExclamation
+            settings.TurnOn
+            Exit Sub
+        End If
+        
+        ' Compare the extracted year with THEYEAR
+        Dim theYear As Integer
+        theYear = Range("THEYEAR").Value
+        
+        If intYear <> theYear Then
+            MsgBox "The year in the period string (" & intYear & ") does not match THEYEAR (" & theYear & ").", vbExclamation
             settings.TurnOn
             Exit Sub
         End If

@@ -1,0 +1,95 @@
+Sub Update_SumaryRpt()
+    ' Initialize settings class
+    Dim settings As New ClassModSettings
+    settings.TurnOff 'Turn off Excel settings for better performance
+    
+    ' Show progress bar
+    UserForm1.Show vbModeless
+    UserForm1.Repaint
+    Application.StatusBar = "Updating in Progress, Please be patient..."
+    With UserForm1
+        .StartUpPosition = 0
+        .Left = Application.Left + (0.5 * Application.Width) - (0.5 * .Width)
+        .Top = Application.Top + (0.5 * Application.Height) - (0.5 * .Height)
+    End With
+    
+    ' Declare variables
+    Dim ArrayAdHoc116 As Variant
+    Dim LastRow As Long, BegRow As Long
+    Dim i As Long, j As Long
+    Dim MatchFound As Boolean
+    Dim SummaryLastRow As Long
+    Dim pctCompl As Single  ' Changed to Single to match progressR parameter
+    
+    ' Unprotect the SummaryRpt sheet before making changes
+    ShtSummaryRpt.Unprotect
+    
+    ' Get the data range from AdHoc116 sheet
+    With ShtAdHoc116
+        LastRow = .Range("N" & .Rows.Count).End(xlUp).Row - 1
+        BegRow = 5  ' Starting from row 5
+        ArrayAdHoc116 = .Range("D5:N" & LastRow).Value
+    End With
+    
+    ' Get last row of Summary Report
+    SummaryLastRow = ShtSummaryRpt.Range("J" & ShtSummaryRpt.Rows.Count).End(xlUp).Row
+    
+    ' Loop through each row in the array
+    For i = 1 To UBound(ArrayAdHoc116)
+        MatchFound = False
+        
+        ' Calculate progress as Single but display as integer
+        pctCompl = CSng(Int(i / UBound(ArrayAdHoc116) * 100))
+        If pctCompl > 100 Then pctCompl = 100
+        progressR pctCompl
+        
+        ' Get Invoice Number from array (column 1 of array = column D of original)
+        If Not IsEmpty(ArrayAdHoc116(i, 1)) Then
+            ' Loop through Summary Report to find matching invoice
+            For j = 1 To SummaryLastRow
+                ' Check if invoice numbers match
+                If ShtSummaryRpt.Cells(j, "J").Value = ArrayAdHoc116(i, 1) Then
+                    MatchFound = True
+                    
+                    ' If Outstanding amounts don't match, update the row
+                    If ShtSummaryRpt.Cells(j, "S").Value <> ArrayAdHoc116(i, 11) Then
+                        ' Update Total Paid (Q = array column 9)
+                        ShtSummaryRpt.Cells(j, "Q").Value = ArrayAdHoc116(i, 9)
+                        ' Update Total W/O (R = array column 10)
+                        ShtSummaryRpt.Cells(j, "R").Value = ArrayAdHoc116(i, 10)
+                        ' Update Total Outstanding (S = array column 11)
+                        ShtSummaryRpt.Cells(j, "S").Value = ArrayAdHoc116(i, 11)
+                    End If
+                    
+                    Exit For ' Exit inner loop once match is found
+                End If
+            Next j
+        End If
+    Next i
+    
+    ' Protect the SummaryRpt sheet after making changes
+    ShtSummaryRpt.Protect Password:="", _
+        DrawingObjects:=False, _
+        Contents:=True, _
+        Scenarios:=False, _
+        AllowFormattingCells:=True, _
+        AllowFormattingColumns:=True, _
+        AllowFormattingRows:=True, _
+        AllowInsertingColumns:=True, _
+        AllowInsertingRows:=True, _
+        AllowInsertingHyperlinks:=True, _
+        AllowDeletingColumns:=True, _
+        AllowDeletingRows:=True, _
+        AllowSorting:=True, _
+        AllowFiltering:=True, _
+        AllowUsingPivotTables:=True, _
+        UserInterfaceOnly:=False
+    
+    ' Clean up
+    Unload UserForm1
+    Application.StatusBar = False
+    settings.TurnOn 'Turn Excel settings back on
+    
+    ' Inform user the update is complete
+    MsgBox "Update complete!", vbInformation
+End Sub
